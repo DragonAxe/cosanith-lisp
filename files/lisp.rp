@@ -1,0 +1,4 @@
+
+(fn mult () (+ 25 4))
+
+(fn main () (+ 3 (+ 3 8) (call mult))
