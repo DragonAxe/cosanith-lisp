@@ -88,7 +88,11 @@ Token lexString(CharStream& in)
     while (true)
     {
         char c = in.peek();
+        if (in.eof()) {
+            throw runtime_error("Unexpected EOF while scanning for string litieral.");
+        }
         if (c == '"') {
+            in.get(); // discard ending quote
             break;
         }
         if (c =='\\') {
@@ -163,8 +167,6 @@ Token TokenStream::get()
         return lexWhitespace(*mIn);
     } else if ( isalnum(c) || ispunct(c) ) {
         return lexLiteralOrKeyword(*mIn);
-    } else {
-        
     }
 
     cout << "Lex error: Unrecognised character: \"" << c << "\"" << endl;
