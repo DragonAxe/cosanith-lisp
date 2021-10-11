@@ -221,8 +221,11 @@ bool lexTests()
     success &= expectTokens("1L-comm /n", lexer::StrCharStream("// comment\n"), "0/1");
     success &= expectTokens("ML-comment", lexer::StrCharStream("/* **comment** */"), "0/1");
     success &= expectTokens("keyword   ", lexer::StrCharStream("fn"), "0k1");
+    success &= expectTokens("zero      ", lexer::StrCharStream("0"), "0i1");
     success &= expectTokens("integer   ", lexer::StrCharStream("5"), "0i1");
     success &= expectTokens("int-neg   ", lexer::StrCharStream("-5"), "0i1");
+    success &= expectTokens("hex       ", lexer::StrCharStream("0xdEAdB33F"), "0i1");
+    success &= expectTokens("oct       ", lexer::StrCharStream("05723"), "0i1");
     success &= expectTokens("string    ", lexer::StrCharStream("\"string\""), "0s1");
     success &= expectTokens("string+W  ", lexer::StrCharStream("\"string w\nspace\""), "0s1");
     success &= expectTokens("floatpt   ", lexer::StrCharStream("2.5"), "0f1");
