@@ -62,6 +62,9 @@ namespace lexer {
 
 namespace {
 
+Token lexIdentifier(CharStream& in, std::string partialStr = "");
+
+
 /// Regex:
 /// \/\/.*                1.single line comment
 /// \/\*(.|\n)*\*\/       2.multi-line comment
@@ -205,10 +208,8 @@ Token lexZeroHexOctal(CharStream& in)
         }
         return Token(TokenType::integer, out.str(), pos);
     } else { // Octal
-
+        throw runtime_error("Octal not implemented.");
     }
-
-    return Token(TokenType::integer, "0xdead", Caret());
 }
 
 /// Regex:
@@ -216,6 +217,24 @@ Token lexZeroHexOctal(CharStream& in)
 Token lexNumber(CharStream& in)
 {
     using namespace std;
+
+    char c;
+    stringstream out;
+
+    c = in.peek();
+    if (c == '-') {
+        out << in.get(); // negative
+        c = in.peek();
+        if (!(isdigit(c) || c == '.')) {
+            lexIdentifier(in, out.str());
+        }
+    }
+    if (c == 0) {
+        throw runtime_error("Number cannot start with zero");
+    }
+    // TODO
+
+
 
     return Token(TokenType::integer, "404", Caret());
 
@@ -262,7 +281,7 @@ Token lexWhitespace(CharStream& in)
 
 /// Regex:
 /// [A-Za-z\+\-\*\/\!\@\#\$\%\^\&\*][A-Za-z0-9\+\-\*\/\!\@\#\$\%\^\&\*]*       9.identifier
-Token lexIdentifier(CharStream& in)
+Token lexIdentifier(CharStream& in, std::string partialStr = "")
 {
     using namespace std;
 
@@ -341,7 +360,7 @@ Token TokenStream::get()
     case '.':  return lexNumber(*mIn);
     }
 
-    if (isdigit(c)) {
+    if (isdigit(c)) { // [1-9], zero is captured earlier
         return lexNumber(*mIn);
     }
 
