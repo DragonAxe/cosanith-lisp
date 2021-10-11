@@ -219,7 +219,7 @@ bool lexTests()
     success &= expectTokens("literal   ", lexer::StrCharStream("text"), "0l1");
     success &= expectTokens("1L-comment", lexer::StrCharStream("// comment"), "0/1");
     success &= expectTokens("1L-comm /n", lexer::StrCharStream("// comment\n"), "0/1");
-    success &= expectTokens("ML-comment", lexer::StrCharStream("/* **comment** */"), "0/1", true);
+    success &= expectTokens("ML-comment", lexer::StrCharStream("/* **comment** */"), "0/1");
     success &= expectTokens("keyword   ", lexer::StrCharStream("fn"), "0k1");
     success &= expectTokens("integer   ", lexer::StrCharStream("5"), "0i1");
     success &= expectTokens("int-neg   ", lexer::StrCharStream("-5"), "0i1");
@@ -228,7 +228,7 @@ bool lexTests()
     success &= expectTokens("floatpt   ", lexer::StrCharStream("2.5"), "0f1");
     success &= expectTokens("floatneg  ", lexer::StrCharStream("-2.5"), "0f1");
     success &= expectTokens("char      ", lexer::StrCharStream("'c'"), "0c1");
-    success &=!expectTokens("char-bad  ", lexer::StrCharStream("'xx'"), "0c1");
+    success &= expectTokens("char-escp ", lexer::StrCharStream("'\\n'"), "0c1");
     success &= expectTokens("Lparen(   ", lexer::StrCharStream("("), "0(1");
     success &= expectTokens("Rparen)   ", lexer::StrCharStream(")"), "0)1");
     success &= expectTokens("Whitespace", lexer::StrCharStream(" \n "), "0 1");

@@ -75,27 +75,24 @@ Token lexString(CharStream& in)
 {
     using namespace std;
 
+    char c;
+    bool wasBackslash = false;
     stringstream out;
     Caret pos = in.pos();
 
-    in.get(); // Discard first quote '"'
+    out << in.get(); // starting quote
 
     while (true)
     {
-        char c = in.peek();
+        c = in.get();
+        out << c;
+        if (!wasBackslash && c == '"') {
+            break;
+        }
         if (in.eof()) {
             throw runtime_error("Unexpected EOF while scanning for string litieral.");
         }
-        if (c == '"') {
-            in.get(); // discard ending quote
-            break;
-        }
-        if (c =='\\') {
-            in.get(); // discard ctrl backslash
-            out << ctrlCharToChar(in.get());
-            continue;
-        }
-        out << in.get();
+        wasBackslash = c == '\\';
     }
     
     return Token(TokenType::string, out.str(), pos);
@@ -105,7 +102,27 @@ Token lexString(CharStream& in)
 /// '\\?.'                11.character literal
 Token lexCharacter(CharStream& in)
 {
-    return Token(TokenType::character, "'-'", Caret());
+    using namespace std;
+
+    char c;
+    bool wasBackslash = false;
+    stringstream out;
+    Caret pos = in.pos();
+
+    out << in.get(); // first single quote
+
+    c = in.get();
+    out << c;
+    if (c == '\\') {
+        out << in.get(); // get escaped char
+    }
+    out << in.get(); // ending single quote
+
+    if (in.eof()) {
+        throw runtime_error("Unexpected EOF while scanning for charactor litieral.");
+    }
+
+    return Token(TokenType::character, out.str(), pos);
 }
 
 /// Regex:

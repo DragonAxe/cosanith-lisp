@@ -82,6 +82,7 @@ public:
 private:
     const std::string mSrc;
     long mSrcPos = 0;
+    bool mEof;
 };
 
 } // namespace lexer

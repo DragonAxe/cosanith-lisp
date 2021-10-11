@@ -23,7 +23,7 @@ const std::string tokenTypeName(const TokenType& type)
     case TokenType::whitespace:    return "WHIT";
     case TokenType::eof:           return "EOF";
     }
-    return "???";
+    return "???"; // Should not get here
 }
 
 const TokenType charToTokenType(const char shorthand)
@@ -42,7 +42,7 @@ const TokenType charToTokenType(const char shorthand)
     case ' ': return TokenType::whitespace;
     case '1': return TokenType::eof;
     }
-    return TokenType::eof;
+    return TokenType::eof; // Should not get here
 }
 
 std::string Token::description() const

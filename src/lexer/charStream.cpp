@@ -75,6 +75,7 @@ char StrCharStream::peek()
     if (mSrcPos < mSrc.size()) {
         return mSrc[mSrcPos];
     } else {
+        mEof = true;
         return '\0';
     }
 }
@@ -90,13 +91,14 @@ char StrCharStream::get()
         }
         return c;
     } else {
+        mEof = true;
         return '\0';
     }
 }
 
 bool StrCharStream::eof() const
 {
-    return mSrcPos >= mSrc.size();
+    return mEof;
 }
 
 Caret StrCharStream::pos() const
