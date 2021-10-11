@@ -31,51 +31,46 @@ namespace lexer {
 
 namespace {
 
-Token lexLiteralOrKeyword(CharStream& in)
+/// Regex:
+/// \/\/.*                1.single line comment
+/// \/\*(.|\n)*\*\/       2.multi-line comment
+Token lexComment(CharStream& in)
 {
     using namespace std;
 
+    char c;
+    bool wasStar = false;
     stringstream out;
     Caret pos = in.pos();
 
-    while ( (isalnum(in.peek()) || (ispunct(in.peek()) && in.peek() != ')')) && !in.eof() ) {
-        out << (char)in.get();
+    out << in.get(); // First forward slash
+
+    switch (in.peek()) {
+    case '/':
+        while (true) {
+            c = in.get();
+            out << c;
+            if (c == '\n' || in.eof()) { break; }
+        }
+        break;
+    case '*':
+        out << in.get();
+        while (true) {
+            c = in.get();
+            out << c;
+            if ( (wasStar && c == '/') || in.eof() ) {
+                break;
+            }
+            wasStar = c == '*';
+        }
+        break;
     }
 
-    string s = out.str();
-
-    if (s == "fn") {
-        return Token(TokenType::keyword, s, pos);
-    }
-
-    return Token(TokenType::literal, s, pos);
+    return Token(TokenType::comment, out.str(), pos);
 }
 
-long lexInteger(std::istream& in)
-{
-    return -1;
-}
-
-double lexFloatpt(std::istream& in)
-{
-    return -1.1;
-}
-
-char lexCharacter(std::istream& in)
-{
-    return '~';
-}
-
-Token lexLeftParen(CharStream& in)
-{
-    return Token(TokenType::leftParen, in.get(), in.pos());
-}
-
-Token lexRightParen(CharStream& in)
-{
-    return Token(TokenType::rightParen, in.get(), in.pos());
-}
-
+/// Regex:
+/// ".*?"                 3.string
 Token lexString(CharStream& in)
 {
     using namespace std;
@@ -106,6 +101,57 @@ Token lexString(CharStream& in)
     return Token(TokenType::string, out.str(), pos);
 }
 
+/// Regex:
+/// '\\?.'                11.character literal
+Token lexCharacter(CharStream& in)
+{
+    return Token(TokenType::character, "'-'", Caret());
+}
+
+/// Regex:
+/// (                     4.left paren
+Token lexLeftParen(CharStream& in)
+{
+    return Token(TokenType::leftParen, in.get(), in.pos());
+}
+
+/// Regex:
+/// )                     5.right paren
+Token lexRightParen(CharStream& in)
+{
+    return Token(TokenType::rightParen, in.get(), in.pos());
+}
+
+/// Regex:
+/// 0x[0-9a-fA-F]+        6.hex number
+/// 0[0-7]+               7.octal number
+Token lexHexOctal(CharStream& in)
+{
+    return Token(TokenType::integer, "0xdead", Caret());
+}
+
+/// Regex:
+/// -?[1-9]*((\.?[0-9]+[df]?)|\.)        8.(+/-) int or float or double
+Token lexNumber(CharStream& in)
+{
+    using namespace std;
+
+    return Token(TokenType::integer, "404", Caret());
+
+    // stringstream out;
+    // Caret pos = in.pos();
+
+    // char c = in.get();
+    // if (c == '-') {
+    //     c = in.get();
+    //     if ( !isdigit(c) && !(c == '.') ) {
+
+    //     }
+    // }
+}
+
+/// Regex:
+/// \s+                   10.whitespace
 Token lexWhitespace(CharStream& in)
 {
     using namespace std;
@@ -133,11 +179,63 @@ Token lexWhitespace(CharStream& in)
     return Token(TokenType::whitespace, out.str(), pos);
 }
 
+/// Regex:
+/// [A-Za-z\+\-\*\/\!\@\#\$\%\^\&\*][A-Za-z0-9\+\-\*\/\!\@\#\$\%\^\&\*]*       9.identifier
+Token lexIdentifier(CharStream& in)
+{
+    using namespace std;
+
+    stringstream out;
+    Caret pos = in.pos();
+
+    while ( (isalnum(in.peek()) || (ispunct(in.peek()) && in.peek() != ')')) && !in.eof() ) {
+        out << (char)in.get();
+    }
+
+    string s = out.str();
+
+    if (s == "fn") {
+        return Token(TokenType::keyword, s, pos);
+    }
+
+    return Token(TokenType::literal, s, pos);
+}
+
 } // anonymous namespace
 
 Token TokenStream::get()
 {
     using namespace std;
+
+    // Lexer regular language:
+    // \/\/.*|\/\*(.|\n)*\*\/|".*?"|'\\?.'|[()]|0x[0-9a-fA-F]+|0[0-7]+|-?[0-9]*((\.?[0-9]+[df]?)|\.)|[A-Za-z\+\-\*\/\!\@\#\$\%\^\&\*][A-Za-z0-9\+\-\*\/\!\@\#\$\%\^\&\*]*|\s+
+
+    // Possible cases:
+    // \/\/.*                1.single line comment
+    // \/\*(.|\n)*\*\/       2.multi-line comment
+    // ".*?"                 3.string
+    // '\\?.'                11.character literal
+    // (                     4.left paren
+    // )                     5.right paren
+    // 0x[0-9a-fA-F]+        6.hex number
+    // 0[0-7]+               7.octal number
+    // -?[1-9]*((\.?[0-9]+[df]?)|\.)                                              8.(+/-) int or float or double
+    // \s+                   10.whitespace
+    // [A-Za-z\+\-\*\/\!\@\#\$\%\^\&\*][A-Za-z0-9\+\-\*\/\!\@\#\$\%\^\&\*]*       9.identifier
+
+    // First character to token map (state transition map)
+    // /    1|2  single or multi- line comment
+    // "    3    string
+    // '    11   character literal
+    // (    4    left paren
+    // )    5    right paren
+    // 0    6|7  hex or octal number
+    // -    8    negative number
+    // 1-9  8    positive number
+    // .    8    floatingpoint number
+    //      10   whitespace
+    // !0-9 9    identifier
+
 
     if (mStreamStart) {
         mStreamStart = false;
@@ -147,30 +245,33 @@ Token TokenStream::get()
     char c = mIn->peek();
 
     if (mIn->eof()) {
-        return Token(TokenType::eof, "", mIn->pos());
+        return Token(TokenType::eof, "eof", mIn->pos());
     }
 
     switch (c)
     {
-    case '(':
-        return lexLeftParen(*mIn);
-    case ')':
-        return lexRightParen(*mIn);
-    case '"':
-        return lexString(*mIn);
-    case '-':
-        // number or symbolic identifier
-        break;
+    case '/':  return lexComment(*mIn);
+    case '"':  return lexString(*mIn);
+    case '\'': return lexCharacter(*mIn);
+    case '(':  return lexLeftParen(*mIn);
+    case ')':  return lexRightParen(*mIn);
+    case '0':  return lexHexOctal(*mIn);
+    case '-':  return lexNumber(*mIn);
+    case '.':  return lexNumber(*mIn);
+    }
+
+    if (isdigit(c)) {
+        return lexNumber(*mIn);
     }
 
     if (isspace(c)) {
         return lexWhitespace(*mIn);
-    } else if ( isalnum(c) || ispunct(c) ) {
-        return lexLiteralOrKeyword(*mIn);
     }
 
-    cout << "Lex error: Unrecognised character: \"" << c << "\"" << endl;
-    throw runtime_error("Lex error: Unrecognised character");
+    return lexIdentifier(*mIn);
+
+    // cout << "Lex error: Unrecognised character: \"" << c << "\"" << endl;
+    // throw runtime_error("Lex error: Unrecognised character");
 }
 
 } // namespace lexer

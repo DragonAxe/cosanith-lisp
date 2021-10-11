@@ -11,6 +11,7 @@ const std::string tokenTypeName(const TokenType& type)
     switch (type)
     {
     case TokenType::start:         return "STRT";
+    case TokenType::comment:       return "COMT";
     case TokenType::literal:       return "LITR";
     case TokenType::keyword:       return "KEYW";
     case TokenType::integer:       return "INT-";
@@ -29,6 +30,7 @@ const TokenType charToTokenType(const char shorthand)
 {
     switch (shorthand) {
     case '0': return TokenType::start;
+    case '/': return TokenType::comment;
     case 'l': return TokenType::literal;
     case 'k': return TokenType::keyword;
     case 'i': return TokenType::integer;

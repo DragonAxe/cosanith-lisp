@@ -13,6 +13,7 @@ namespace lexer {
 enum class TokenType
 {
     start,
+    comment,
     keyword,
     literal,
     integer,
