@@ -62,7 +62,7 @@ namespace lexer {
 
 namespace {
 
-Token lexIdentifier(CharStream& in, std::string partialStr = "");
+Token lexIdentifier(CharStream& in, std::string partialStr);
 
 
 /// Regex:
@@ -128,7 +128,7 @@ Token lexString(CharStream& in)
         }
         wasBackslash = c == '\\';
     }
-    
+
     return Token(TokenType::string, out.str(), pos);
 }
 
@@ -340,7 +340,7 @@ Token TokenStream::get()
     if (mStreamStart) {
         mStreamStart = false;
         return Token(TokenType::start, "start", mIn->pos());
-    }    
+    }
 
     char c = mIn->peek();
 
