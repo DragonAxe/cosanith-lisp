@@ -1,5 +1,6 @@
 #include <lexer/lexer.h>
 #include <lexer/token.h>
+#include <regex/regex.h>
 #include <parser/parser.h>
 
 #include <iostream>
@@ -255,7 +256,11 @@ int main()
     // lexer::FileCharStream in("/home/dragonaxe/Documents/programming_conan/calculator/lisp.rp");
 
     bool success = true;
-    success &= lexTests();
+    // success &= lexTests();
+
+    // lexer::tests::testScanNumber();
+    // lexer::tests::testScanInt();
+    lexer::tests::testScanFloat();
 
 //     Node* root = parseNodes(in);
 //     // root->prettyPrint();

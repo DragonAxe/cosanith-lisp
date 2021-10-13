@@ -20,4 +20,12 @@ private:
     std::shared_ptr<CharStream> mIn;
 };
 
-}
+namespace tests {
+
+void testScanNumber();
+void testScanInt();
+void testScanFloat();
+
+} // namespace lexer::tests
+
+} // namespace lexer

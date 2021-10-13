@@ -5,6 +5,7 @@
 #include <iostream>
 #include <istream>
 #include <fstream>
+#include <functional>
 #include <sstream>
 #include <stack>
 #include <variant>
@@ -64,6 +65,268 @@ namespace {
 
 Token lexIdentifier(CharStream& in, std::string partialStr);
 
+//
+// Slurp helpers --------------------------------------------------------------
+//
+
+void getWhile(std::function<bool (const char)> condition, CharStream& in, std::stringstream& out)
+{
+    while (true) {
+        char c = in.peek();
+        if (condition(c) && !in.eof()) {
+            out << in.get();
+        } else {
+            break;
+        }
+    }
+}
+
+void getExpect(std::function<bool (const char)> condition, CharStream& in, std::stringstream& out)
+{
+    char c = in.peek();
+    bool matches = condition(c);
+    if (matches) {
+        out << in.get();
+    } else {
+        std::stringstream err;
+        err << "Unexpected ";
+        if (in.eof()) {
+            err << "EOF";
+        } else {
+            err << '\'' << c << '\'';
+        }
+        err << " while scanning";
+        throw std::runtime_error(err.str());
+    }
+}
+
+//
+// Scanner state machines -----------------------------------------------------
+//
+
+///
+class ScannerBase
+{
+public:
+    enum class Acceptance {
+        accepted,
+        rejected,
+        undetermined,
+    };
+    virtual void matchChar(char c) = 0;
+    virtual Acceptance acceptance() const = 0;
+};
+
+// ///
+// /// 0x[0-9a-fA-F]+        6.hex number
+// class ScanHex : ScannerBase
+// {
+// private:
+//     std::function<char (bool)> matcherFn;
+// public:
+//     explicit ScanHex(std::function<char (bool)> fn) : matcherFn(fn)
+//     {}
+
+//     std::optional<lexer::Token> matchChar(char c) override
+//     {
+//         return std::nullopt;
+//     }
+// };
+
+// ///
+// /// 0[0-7]*               7.zero or octal number
+// class ScanOct : ScannerBase
+// {
+// private:
+//     std::vector<ScannerBase*> possibleExpressions;
+// public:
+//     explicit ScanOct(std::vector<ScannerBase*> possibleExpressions) : possibleExpressions(possibleExpressions)
+//     {}
+
+//     std::optional<lexer::Token> matchChar(char c) override
+//     {
+
+//         return std::nullopt;
+//     }
+// };
+
+
+///
+/// \w+                         Whitespace
+class ScanWhitespace : public ScannerBase
+{
+public:
+    enum class States {
+        start,
+        whitespace,
+        reject,
+    } mState = States::start;
+
+    void matchChar(char c) override
+    {
+        switch (mState)
+        {
+        case States::start:
+            if (isspace(c)) { mState = States::whitespace; }
+            else { mState = States::reject; }
+            break;
+        case States::whitespace:
+            if (isspace(c)) { mState = States::whitespace; }
+            else { mState = States::reject; }
+            break;
+        default: break;
+        }
+    }
+
+    Acceptance acceptance() const override
+    {
+        switch (mState)
+        {
+        case States::whitespace:
+            return Acceptance::accepted;
+
+        case States::start:
+            return Acceptance::undetermined;
+
+        default:
+            return Acceptance::rejected;
+        }
+    }
+};
+
+///
+/// -?[0-9]*\.[0-9]+[df]?           8.(+/-) float or double
+class ScanFloat : public ScannerBase
+{
+public:
+    enum class States {
+        start,
+        negative,
+        whole,
+        point,
+        fract,
+        sufix,
+        accept,
+        reject,
+    } mState = States::start;
+
+    void matchChar(char c) override
+    {
+        switch (mState)
+        {
+        case States::start:
+            if (c == '-') { mState = States::negative; }
+            else if (isdigit(c)) { mState = States::whole; }
+            else if (c == '.') { mState = States::point; }
+            else { mState = States::reject; }
+            break;
+        case States::negative:
+            if (isdigit(c)) { mState = States::whole; }
+            else if (c == '.') { mState = States::point; }
+            else { mState = States::reject; }
+            break;
+        case States::whole:
+            if (isdigit(c)) { mState = States::whole; }
+            else if (c == '.') { mState = States::point; }
+            else { mState = States::reject; }
+            break;
+        case States::point:
+            if (isdigit(c)) { mState = States::fract; }
+            else { mState = States::reject; }
+            break;
+        case States::fract:
+            if (isdigit(c)) { mState = States::fract; }
+            else if (c == 'f') { mState = States::sufix; }
+            else if (c == 'd') { mState = States::sufix; }
+            else { mState = States::reject; }
+            break;
+        case States::sufix:
+            mState = States::reject;
+            break;
+        default: break;
+        }
+    }
+
+    Acceptance acceptance() const override
+    {
+        switch (mState)
+        {
+        case States::fract:
+        case States::sufix:
+            return Acceptance::accepted;
+
+        case States::start:
+        case States::negative:
+        case States::whole:
+        case States::point:
+            return Acceptance::undetermined;
+
+        default:
+            return Acceptance::rejected;
+        }
+    }
+};
+
+///
+/// -?[0-9]+[l]?                    8.(+/-) float or double
+class ScanInt : public ScannerBase
+{
+public:
+    enum class States {
+        start,
+        negative,
+        zero,
+        digit,
+        reject,
+    } mState = States::start;
+
+    void matchChar(char c) override
+    {
+        switch (mState)
+        {
+        case States::start:
+            if (c == '-') { mState = States::negative; }
+            else if (isdigit(c) && c != '0') { mState = States::digit; }
+            else if (c == '0') { mState = States::zero; }
+            else { mState = States::reject; }
+            break;
+        case States::negative:
+            if (isdigit(c) && c != '0') { mState = States::digit; }
+            else if (c == '0') { mState = States::zero; }
+            else { mState = States::reject; }
+            break;
+        case States::zero:
+            mState = States::reject;
+            break;
+        case States::digit:
+            if (isdigit(c)) { mState = States::digit; }
+            else { mState = States::reject; }
+            break;
+        default: break;
+        }
+    }
+
+    Acceptance acceptance() const override
+    {
+        switch (mState)
+        {
+        case States::digit:
+        case States::zero:
+            return Acceptance::accepted;
+
+        case States::start:
+        case States::negative:
+            return Acceptance::undetermined;
+
+        default:
+            return Acceptance::rejected;
+        }
+    }
+};
+
+//
+// Lexer states ---------------------------------------------------------------
+//
 
 /// Regex:
 /// \/\/.*                1.single line comment
@@ -74,6 +337,7 @@ Token lexComment(CharStream& in)
 
     char c;
     bool wasStar = false;
+    bool wasNewLine = false;
     stringstream out;
     Caret pos = in.pos();
 
@@ -81,11 +345,16 @@ Token lexComment(CharStream& in)
 
     switch (in.peek()) {
     case '/':
-        while (true) {
-            c = in.get();
-            out << c;
-            if (c == '\n' || in.eof()) { break; }
-        }
+        out << in.get();
+        getWhile([&wasNewLine](const char c){
+            bool match = wasNewLine;
+            wasNewLine = c == '\n';
+            return !match; }, in, out);
+        // while (true) {
+        //     c = in.get();
+        //     out << c;
+        //     if (c == '\n' || in.eof()) { break; }
+        // }
         break;
     case '*':
         out << in.get();
@@ -109,25 +378,20 @@ Token lexString(CharStream& in)
 {
     using namespace std;
 
-    char c;
     bool wasBackslash = false;
     stringstream out;
     Caret pos = in.pos();
 
-    out << in.get(); // starting quote
+    getExpect([](const char c) {
+        return c == '"'; }, in, out);
 
-    while (true)
-    {
-        c = in.get();
-        out << c;
-        if (!wasBackslash && c == '"') {
-            break;
-        }
-        if (in.eof()) {
-            throw runtime_error("Unexpected EOF while scanning for string litieral.");
-        }
+    getWhile([&wasBackslash](const char c) {
+        bool match = !wasBackslash && c == '"';
         wasBackslash = c == '\\';
-    }
+        return !match; }, in, out);
+
+    getExpect([](const char c) {
+        return c == '"'; }, in, out);
 
     return Token(TokenType::string, out.str(), pos);
 }
@@ -213,7 +477,7 @@ Token lexZeroHexOctal(CharStream& in)
 }
 
 /// Regex:
-/// -?[1-9]*((\.?[0-9]+[df]?)|\.)        8.(+/-) int or float or double
+/// -?([1-9][0-9]*)?((\.?[0-9]+[df]?)|\.)     8.(+/-) int or float or double
 Token lexNumber(CharStream& in)
 {
     using namespace std;
@@ -232,7 +496,7 @@ Token lexNumber(CharStream& in)
     if (c == 0) {
         throw runtime_error("Number cannot start with zero");
     }
-    // TODO
+
 
 
 
@@ -307,8 +571,52 @@ Token TokenStream::get()
 {
     using namespace std;
 
+    if (mStreamStart) {
+        mStreamStart = false;
+        return Token(TokenType::start, "start", mIn->pos());
+    }
+
+    char c = mIn->peek();
+
+    if (mIn->eof()) {
+        return Token(TokenType::eof, "eof", mIn->pos());
+    }
+
+    std::stringstream out;
+    ScanInt i;
+    ScanFloat f;
+    ScanWhitespace w;
+    std::vector<ScannerBase*> scanners{&i, &f, &w};
+
+    // Keep track of previous acceptance states
+    std::vector<ScannerBase::Acceptance> accs;
+    for (const ScannerBase* scanner : scanners) {
+        accs.emplace_back(scanner->acceptance());
+    }
+
+    std::string testStr = "-239842341.234589283 other";
+    for (const char c : testStr) {
+        for (ScannerBase* scanner : scanners) {
+            scanner->matchChar(c);
+        }
+
+        bool allReject = true;
+        for (const ScannerBase* scanner : scanners) {
+            if (scanner->acceptance() != ScannerBase::Acceptance::rejected) {
+                allReject = false;
+            }
+        }
+        if (allReject) {
+            break;
+        }
+
+        out << c;
+    }
+
+    throw runtime_error("WIP");
+
     // Lexer regular language:
-    // \/\/.*|\/\*(.|\n)*\*\/|".*?"|'\\?.'|[()]|0x[0-9a-fA-F]+|0[0-7]0|-?[0-9]*((\.?[0-9]+[df]?)|\.)|[A-Za-z\+\-\*\/\!\@\#\$\%\^\&\*][A-Za-z0-9\+\-\*\/\!\@\#\$\%\^\&\*]*|\s+
+    // \/\/.*|\/\*(.|\n)*\*\/|".*?"|'\\?.'|[()]|0x[0-9a-fA-F]+|0[0-7]0|-?([1-9][0-9]*)?((\.?[0-9]+[df]?)|\.)|[A-Za-z\+\-\*\/\!\@\#\$\%\^\&\*][A-Za-z0-9\+\-\*\/\!\@\#\$\%\^\&\*]*|\s+
 
     // Possible cases:
     // \/\/.*                1.single line comment
@@ -317,9 +625,10 @@ Token TokenStream::get()
     // '\\?.'                11.character literal
     // (                     4.left paren
     // )                     5.right paren
+    // 0                     12. zero
     // 0x[0-9a-fA-F]+        6.hex number
     // 0[0-7]*               7.zero or octal number
-    // -?[1-9]*((\.?[0-9]+[df]?)|\.)                                              8.(+/-) int or float or double
+    // -?([1-9][0-9]*)?((\.?[0-9]+[df]?)|\.)                                      8.(+/-) int or float or double
     // \s+                   10.whitespace
     // [A-Za-z\+\-\*\/\!\@\#\$\%\^\&\*][A-Za-z0-9\+\-\*\/\!\@\#\$\%\^\&\*]*       9.identifier
 
@@ -337,41 +646,131 @@ Token TokenStream::get()
     // !0-9 9    identifier
 
 
-    if (mStreamStart) {
-        mStreamStart = false;
-        return Token(TokenType::start, "start", mIn->pos());
-    }
+    // if (mStreamStart) {
+    //     mStreamStart = false;
+    //     return Token(TokenType::start, "start", mIn->pos());
+    // }
 
-    char c = mIn->peek();
+    // char c = mIn->peek();
 
-    if (mIn->eof()) {
-        return Token(TokenType::eof, "eof", mIn->pos());
-    }
+    // if (mIn->eof()) {
+    //     return Token(TokenType::eof, "eof", mIn->pos());
+    // }
 
-    switch (c)
-    {
-    case '/':  return lexComment(*mIn);
-    case '"':  return lexString(*mIn);
-    case '\'': return lexCharacter(*mIn);
-    case '(':  return lexLeftParen(*mIn);
-    case ')':  return lexRightParen(*mIn);
-    case '0':  return lexZeroHexOctal(*mIn);
-    case '-':  return lexNumber(*mIn);
-    case '.':  return lexNumber(*mIn);
-    }
+    // switch (c)
+    // {
+    // case '/':  return lexComment(*mIn);
+    // case '"':  return lexString(*mIn);
+    // case '\'': return lexCharacter(*mIn);
+    // case '(':  return lexLeftParen(*mIn);
+    // case ')':  return lexRightParen(*mIn);
+    // case '0':  return lexZeroHexOctal(*mIn);
+    // case '-':  return lexNumber(*mIn);
+    // case '.':  return lexNumber(*mIn);
+    // }
 
-    if (isdigit(c)) { // [1-9], zero is captured earlier
-        return lexNumber(*mIn);
-    }
+    // if (isdigit(c)) { // [1-9], zero is captured earlier
+    //     return lexNumber(*mIn);
+    // }
 
-    if (isspace(c)) {
-        return lexWhitespace(*mIn);
-    }
+    // if (isspace(c)) {
+    //     return lexWhitespace(*mIn);
+    // }
 
-    return lexIdentifier(*mIn);
+    // return lexIdentifier(*mIn);
 
     // cout << "Lex error: Unrecognised character: \"" << c << "\"" << endl;
     // throw runtime_error("Lex error: Unrecognised character");
 }
+
+namespace tests { // lexer::tests
+
+namespace {
+
+void testHelper(ScannerBase&& scanner, ScannerBase::Acceptance expectedResult, std::string testString)
+{
+    for (const char c : testString) {
+        scanner.matchChar(c);
+    }
+    if (scanner.acceptance() == expectedResult) {
+        std::cout << "Success!";
+    } else {
+        std::cout << "Failure!";
+    }
+    std::cout << " String='" << testString << "'" << std::endl;
+}
+
+} // lexer::tests::anonymous namespace
+
+void testScanNumber()
+{
+    ScanInt i;
+    ScanFloat f;
+    std::vector<ScannerBase*> scanners{&i, &f};
+    std::stringstream out;
+
+    std::string testStr = "-239842341.234589283 other";
+    for (const char c : testStr) {
+        for (ScannerBase* scanner : scanners) {
+            scanner->matchChar(c);
+        }
+
+        bool allReject = true;
+        for (const ScannerBase* scanner : scanners) {
+            if (scanner->acceptance() != ScannerBase::Acceptance::rejected) {
+                allReject = false;
+            }
+        }
+        if (allReject) {
+            break;
+        }
+
+        out << c;
+    }
+
+    std::cout << "Lexed: '" << out.str() << "'" << std::endl;
+}
+
+void testScanInt()
+{
+    using acc = ScannerBase::Acceptance;
+    testHelper(ScanInt(), acc::accepted, "0");
+    testHelper(ScanInt(), acc::accepted, "-0");
+    testHelper(ScanInt(), acc::accepted, "5");
+    testHelper(ScanInt(), acc::accepted, "-5");
+    testHelper(ScanInt(), acc::accepted, "50");
+    testHelper(ScanInt(), acc::accepted, "-50");
+
+    testHelper(ScanInt(), acc::rejected, "-");
+    testHelper(ScanInt(), acc::rejected, "05");
+    testHelper(ScanInt(), acc::rejected, "-05");
+
+    testHelper(ScanInt(), acc::rejected, "num");
+}
+
+void testScanFloat()
+{
+    using acc = ScannerBase::Acceptance;
+    testHelper(ScanFloat(), acc::accepted, "0.0");
+    testHelper(ScanFloat(), acc::accepted, "-0.0");
+    testHelper(ScanFloat(), acc::accepted, ".0");
+    testHelper(ScanFloat(), acc::accepted, "-.0");
+    testHelper(ScanFloat(), acc::accepted, "50.10");
+    testHelper(ScanFloat(), acc::accepted, "-50.10");
+    testHelper(ScanFloat(), acc::accepted, "05.10");
+    testHelper(ScanFloat(), acc::accepted, "-05.10");
+    testHelper(ScanFloat(), acc::accepted, "-05.10f");
+    testHelper(ScanFloat(), acc::accepted, "-05.10d");
+
+    testHelper(ScanFloat(), acc::undetermined, "-0.");
+    testHelper(ScanFloat(), acc::undetermined, "0.");
+    testHelper(ScanFloat(), acc::undetermined, ".");
+
+    // Possible future work
+    testHelper(ScanFloat(), acc::rejected, "nan");
+    testHelper(ScanFloat(), acc::rejected, "-nan");
+}
+
+} // namespace lexer::tests
 
 } // namespace lexer
