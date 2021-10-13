@@ -1,5 +1,4 @@
-#ifndef charStream_h
-#define charStream_h
+#pragma once
 
 #include <string>
 #include <fstream>
@@ -86,5 +85,3 @@ private:
 };
 
 } // namespace lexer
-
-#endif // charStream_h

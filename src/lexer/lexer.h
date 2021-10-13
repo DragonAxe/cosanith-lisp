@@ -1,5 +1,4 @@
-#ifndef lexer_h
-#define lexer_h
+#pragma once
 
 #include <charStream.h>
 
@@ -22,5 +21,3 @@ private:
 };
 
 }
-
-#endif // lexer_h

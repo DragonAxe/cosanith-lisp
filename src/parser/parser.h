@@ -1,5 +1,4 @@
-#ifndef parser_h
-#define parser_h
+#pragma once
 
 #include <variant>
 #include <iostream>
@@ -49,5 +48,3 @@ private:
 ConsNode parseTokens(lexer::CharStream& cs);
 
 } // namespace parser
-
-#endif // parser_h

@@ -1,5 +1,4 @@
-#ifndef token_h
-#define token_h
+#pragma once
 
 #include <charStream.h>
 
@@ -62,5 +61,3 @@ public: // Methods:
 };
 
 } // namespace lexer
-
-#endif // token_h
