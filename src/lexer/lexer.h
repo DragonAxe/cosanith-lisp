@@ -3,6 +3,7 @@
 #include <charStream.h>
 
 #include <string>
+#include <utility>
 #include <variant>
 #include <memory>
 
@@ -12,7 +13,7 @@ class Token;
 class TokenStream
 {
 public:
-    explicit TokenStream(std::shared_ptr<CharStream> input) : mIn(input) {}
+    explicit TokenStream(std::shared_ptr<CharStream> input) : mIn(std::move(input)) {}
     Token get();
 
 private:
@@ -22,9 +23,9 @@ private:
 
 namespace tests {
 
-void testScanNumber();
-void testScanInt();
-void testScanFloat();
+[[maybe_unused]] void testScanNumber();
+[[maybe_unused]] void testScanInt();
+[[maybe_unused]] void testScanFloat();
 
 } // namespace lexer::tests
 

@@ -4,27 +4,23 @@
 
 #include <iostream>
 #include <istream>
-#include <fstream>
 #include <functional>
 #include <sstream>
-#include <stack>
-#include <variant>
-#include <vector>
-#include <optional>
 
 namespace {
 
-char ctrlCharToChar(const char c)
+[[maybe_unused]] char ctrlCharToChar(const char c)
 {
     switch (c) {
     case '\\': return '\\';
     case 'n': return '\n';
     case '"': return '"';
+    default:
+        return c;
     }
-    return c;
 }
 
-bool isHexDigit(const char c)
+[[maybe_unused]] bool isHexDigit(const char c)
 {
     switch (c)
     {
@@ -51,8 +47,9 @@ bool isHexDigit(const char c)
     case 'E':
     case 'F':
         return true;
+    default:
+        return false;
     }
-    return false;
 }
 
 } // anonymous namespace
@@ -63,42 +60,42 @@ namespace lexer {
 
 namespace {
 
-Token lexIdentifier(CharStream& in, std::string partialStr);
+//Token lexIdentifier(CharStream& in, std::string partialStr);
 
 //
 // Slurp helpers --------------------------------------------------------------
 //
 
-void getWhile(std::function<bool (const char)> condition, CharStream& in, std::stringstream& out)
-{
-    while (true) {
-        char c = in.peek();
-        if (condition(c) && !in.eof()) {
-            out << in.get();
-        } else {
-            break;
-        }
-    }
-}
-
-void getExpect(std::function<bool (const char)> condition, CharStream& in, std::stringstream& out)
-{
-    char c = in.peek();
-    bool matches = condition(c);
-    if (matches) {
-        out << in.get();
-    } else {
-        std::stringstream err;
-        err << "Unexpected ";
-        if (in.eof()) {
-            err << "EOF";
-        } else {
-            err << '\'' << c << '\'';
-        }
-        err << " while scanning";
-        throw std::runtime_error(err.str());
-    }
-}
+//void getWhile(const std::function<bool (const char)>& condition, CharStream& in, std::stringstream& out)
+//{
+//    while (true) {
+//        char c = in.peek();
+//        if (condition(c) && !in.eof()) {
+//            out << in.get();
+//        } else {
+//            break;
+//        }
+//    }
+//}
+//
+//void getExpect(const std::function<bool (const char)>& condition, CharStream& in, std::stringstream& out)
+//{
+//    char c = in.peek();
+//    bool matches = condition(c);
+//    if (matches) {
+//        out << in.get();
+//    } else {
+//        std::stringstream err;
+//        err << "Unexpected ";
+//        if (in.eof()) {
+//            err << "EOF";
+//        } else {
+//            err << '\'' << c << '\'';
+//        }
+//        err << " while scanning";
+//        throw std::runtime_error(err.str());
+//    }
+//}
 
 //
 // Scanner state machines -----------------------------------------------------
@@ -114,7 +111,8 @@ public:
         undetermined,
     };
     virtual void matchChar(char c) = 0;
-    virtual Acceptance acceptance() const = 0;
+    [[nodiscard]] virtual Acceptance acceptance() const = 0;
+    [[nodiscard]] virtual TokenType tokenType() const = 0;
 };
 
 // ///
@@ -167,10 +165,7 @@ public:
         switch (mState)
         {
         case States::start:
-            if (isspace(c)) { mState = States::whitespace; }
-            else { mState = States::reject; }
-            break;
-        case States::whitespace:
+            case States::whitespace:
             if (isspace(c)) { mState = States::whitespace; }
             else { mState = States::reject; }
             break;
@@ -178,7 +173,7 @@ public:
         }
     }
 
-    Acceptance acceptance() const override
+    [[nodiscard]] Acceptance acceptance() const override
     {
         switch (mState)
         {
@@ -191,6 +186,10 @@ public:
         default:
             return Acceptance::rejected;
         }
+    }
+    [[nodiscard]] TokenType tokenType() const override
+    {
+        return TokenType::whitespace;
     }
 };
 
@@ -205,8 +204,7 @@ public:
         whole,
         point,
         fract,
-        sufix,
-        accept,
+        suffix,
         reject,
     } mState = States::start;
 
@@ -221,10 +219,6 @@ public:
             else { mState = States::reject; }
             break;
         case States::negative:
-            if (isdigit(c)) { mState = States::whole; }
-            else if (c == '.') { mState = States::point; }
-            else { mState = States::reject; }
-            break;
         case States::whole:
             if (isdigit(c)) { mState = States::whole; }
             else if (c == '.') { mState = States::point; }
@@ -236,23 +230,22 @@ public:
             break;
         case States::fract:
             if (isdigit(c)) { mState = States::fract; }
-            else if (c == 'f') { mState = States::sufix; }
-            else if (c == 'd') { mState = States::sufix; }
+            else if (c == 'f' || c == 'd') { mState = States::suffix; }
             else { mState = States::reject; }
             break;
-        case States::sufix:
+        case States::suffix:
             mState = States::reject;
             break;
         default: break;
         }
     }
 
-    Acceptance acceptance() const override
+    [[nodiscard]] Acceptance acceptance() const override
     {
         switch (mState)
         {
         case States::fract:
-        case States::sufix:
+        case States::suffix:
             return Acceptance::accepted;
 
         case States::start:
@@ -264,6 +257,10 @@ public:
         default:
             return Acceptance::rejected;
         }
+    }
+    [[nodiscard]] TokenType tokenType() const override
+    {
+        return TokenType::floatpt;
     }
 };
 
@@ -306,7 +303,7 @@ public:
         }
     }
 
-    Acceptance acceptance() const override
+    [[nodiscard]] Acceptance acceptance() const override
     {
         switch (mState)
         {
@@ -322,248 +319,298 @@ public:
             return Acceptance::rejected;
         }
     }
+    [[nodiscard]] TokenType tokenType() const override
+    {
+        return TokenType::integer;
+    }
 };
+
+///
+class ScannerSet
+{
+private:
+    std::vector<std::shared_ptr<ScannerBase>> mScanners;
+    std::vector<ScannerBase::Acceptance> mPrevAcceptance;
+    bool mAllRejected = false;
+public:
+    ScannerSet()
+    {
+        mScanners.emplace_back(std::make_shared<ScanWhitespace>());
+        mScanners.emplace_back(std::make_shared<ScanFloat>());
+        mScanners.emplace_back(std::make_shared<ScanInt>());
+        // Pre-initialize mPrevAcceptance to same size as mScanners
+        for (auto& scanner : mScanners) {
+            mPrevAcceptance.emplace_back(scanner->acceptance());
+        }
+    }
+    void matchChar(const char c)
+    {
+        bool allRejected = true;
+        for (int i = 0; i < mScanners.size(); i++) {
+            mPrevAcceptance[i] = mScanners[i]->acceptance();
+            mScanners[i]->matchChar(c);
+            if (mScanners[i]->acceptance() != ScannerBase::Acceptance::rejected) {
+                allRejected = false;
+            }
+        }
+        mAllRejected = allRejected;
+    }
+    [[nodiscard]] bool allRejected() const
+    {
+        return mAllRejected;
+    }
+    [[nodiscard]] std::shared_ptr<ScannerBase> lastAcceptedScanner() const
+    {
+        for (int i = 0; i < mScanners.size(); i++) {
+            if (mPrevAcceptance[i] == ScannerBase::Acceptance::accepted) {
+                return mScanners[i];
+            }
+        }
+        return nullptr;
+    }
+};
+
 
 //
 // Lexer states ---------------------------------------------------------------
 //
 
-/// Regex:
-/// \/\/.*                1.single line comment
-/// \/\*(.|\n)*\*\/       2.multi-line comment
-Token lexComment(CharStream& in)
-{
-    using namespace std;
-
-    char c;
-    bool wasStar = false;
-    bool wasNewLine = false;
-    stringstream out;
-    Caret pos = in.pos();
-
-    out << in.get(); // First forward slash
-
-    switch (in.peek()) {
-    case '/':
-        out << in.get();
-        getWhile([&wasNewLine](const char c){
-            bool match = wasNewLine;
-            wasNewLine = c == '\n';
-            return !match; }, in, out);
-        // while (true) {
-        //     c = in.get();
-        //     out << c;
-        //     if (c == '\n' || in.eof()) { break; }
-        // }
-        break;
-    case '*':
-        out << in.get();
-        while (true) {
-            c = in.get();
-            out << c;
-            if ( (wasStar && c == '/') || in.eof() ) {
-                break;
-            }
-            wasStar = c == '*';
-        }
-        break;
-    }
-
-    return Token(TokenType::comment, out.str(), pos);
-}
-
-/// Regex:
-/// ".*?"                 3.string
-Token lexString(CharStream& in)
-{
-    using namespace std;
-
-    bool wasBackslash = false;
-    stringstream out;
-    Caret pos = in.pos();
-
-    getExpect([](const char c) {
-        return c == '"'; }, in, out);
-
-    getWhile([&wasBackslash](const char c) {
-        bool match = !wasBackslash && c == '"';
-        wasBackslash = c == '\\';
-        return !match; }, in, out);
-
-    getExpect([](const char c) {
-        return c == '"'; }, in, out);
-
-    return Token(TokenType::string, out.str(), pos);
-}
-
-/// Regex:
-/// '\\?.'                11.character literal
-Token lexCharacter(CharStream& in)
-{
-    using namespace std;
-
-    char c;
-    bool wasBackslash = false;
-    stringstream out;
-    Caret pos = in.pos();
-
-    out << in.get(); // first single quote
-
-    c = in.get();
-    out << c;
-    if (c == '\\') {
-        out << in.get(); // get escaped char
-    }
-    out << in.get(); // ending single quote
-
-    if (in.eof()) {
-        throw runtime_error("Unexpected EOF while scanning for charactor litieral.");
-    }
-
-    return Token(TokenType::character, out.str(), pos);
-}
-
-/// Regex:
-/// (                     4.left paren
-Token lexLeftParen(CharStream& in)
-{
-    return Token(TokenType::leftParen, in.get(), in.pos());
-}
-
-/// Regex:
-/// )                     5.right paren
-Token lexRightParen(CharStream& in)
-{
-    return Token(TokenType::rightParen, in.get(), in.pos());
-}
-
-/// Regex:
-/// 0                     12.zero
-/// 0x[0-9a-fA-F]+        6.hex number
-/// 0[0-7]+               7.octal number
-Token lexZeroHexOctal(CharStream& in)
-{
-    using namespace std;
-
-    char c;
-    stringstream out;
-    Caret pos = in.pos();
-
-    out << in.get(); // prefix zero
-
-    c = in.get();
-    if (in.eof() || !(isdigit(c) || c == 'x')) { // Zero
-        return Token(TokenType::integer, '0', pos);
-    } else if (c == 'x') { // Hex
-        out << c; // x
-        // There must be at least one digit after the x
-        c = in.peek();
-        if (!isHexDigit(c) || in.eof()) {
-            throw runtime_error("For a hex value, there must be at least one valid hex digit after the '0x'.");
-        }
-        out << in.get(); // 1st digit
-        while (true) {
-            c = in.peek();
-            if (isHexDigit(c) && !in.eof()) {
-                out << in.get();
-            } else {
-                break;
-            }
-        }
-        return Token(TokenType::integer, out.str(), pos);
-    } else { // Octal
-        throw runtime_error("Octal not implemented.");
-    }
-}
-
-/// Regex:
-/// -?([1-9][0-9]*)?((\.?[0-9]+[df]?)|\.)     8.(+/-) int or float or double
-Token lexNumber(CharStream& in)
-{
-    using namespace std;
-
-    char c;
-    stringstream out;
-
-    c = in.peek();
-    if (c == '-') {
-        out << in.get(); // negative
-        c = in.peek();
-        if (!(isdigit(c) || c == '.')) {
-            lexIdentifier(in, out.str());
-        }
-    }
-    if (c == 0) {
-        throw runtime_error("Number cannot start with zero");
-    }
-
-
-
-
-    return Token(TokenType::integer, "404", Caret());
-
-    // stringstream out;
-    // Caret pos = in.pos();
-
-    // char c = in.get();
-    // if (c == '-') {
-    //     c = in.get();
-    //     if ( !isdigit(c) && !(c == '.') ) {
-
-    //     }
-    // }
-}
-
-/// Regex:
-/// \s+                   10.whitespace
-Token lexWhitespace(CharStream& in)
-{
-    using namespace std;
-
-    std::stringstream out;
-    Caret pos = in.pos();
-    char c;
-
-    while (true)
-    {
-        c = in.peek();
-
-        if (in.eof()) {
-            goto no_more_whitespace;
-        }
-
-        if (isspace(c)) {
-            out << (char)in.get();
-        } else {
-            goto no_more_whitespace;
-        }
-    }
-    no_more_whitespace:;
-
-    return Token(TokenType::whitespace, out.str(), pos);
-}
-
-/// Regex:
-/// [A-Za-z\+\-\*\/\!\@\#\$\%\^\&\*][A-Za-z0-9\+\-\*\/\!\@\#\$\%\^\&\*]*       9.identifier
-Token lexIdentifier(CharStream& in, std::string partialStr = "")
-{
-    using namespace std;
-
-    stringstream out;
-    Caret pos = in.pos();
-
-    while ( (isalnum(in.peek()) || (ispunct(in.peek()) && in.peek() != ')')) && !in.eof() ) {
-        out << (char)in.get();
-    }
-
-    string s = out.str();
-
-    if (s == "fn") {
-        return Token(TokenType::keyword, s, pos);
-    }
-
-    return Token(TokenType::literal, s, pos);
-}
+///// Regex:
+///// \/\/.*                1.single line comment
+///// \/\*(.|\n)*\*\/       2.multi-line comment
+//Token lexComment(CharStream& in)
+//{
+//    using namespace std;
+//
+//    char c;
+//    bool wasStar = false;
+//    bool wasNewLine = false;
+//    stringstream out;
+//    Caret pos = in.pos();
+//
+//    out << in.get(); // First forward slash
+//
+//    switch (in.peek()) {
+//    case '/':
+//        out << in.get();
+//        getWhile([&wasNewLine](const char c){
+//            bool match = wasNewLine;
+//            wasNewLine = c == '\n';
+//            return !match; }, in, out);
+//        // while (true) {
+//        //     c = in.get();
+//        //     out << c;
+//        //     if (c == '\n' || in.eof()) { break; }
+//        // }
+//        break;
+//    case '*':
+//        out << in.get();
+//        while (true) {
+//            c = in.get();
+//            out << c;
+//            if ( (wasStar && c == '/') || in.eof() ) {
+//                break;
+//            }
+//            wasStar = c == '*';
+//        }
+//        break;
+//    }
+//
+//    return {TokenType::comment, out.str(), pos};
+//}
+//
+///// Regex:
+///// ".*?"                 3.string
+//Token lexString(CharStream& in)
+//{
+//    using namespace std;
+//
+//    bool wasBackslash = false;
+//    stringstream out;
+//    Caret pos = in.pos();
+//
+//    getExpect([](const char c) {
+//        return c == '"'; }, in, out);
+//
+//    getWhile([&wasBackslash](const char c) {
+//        bool match = !wasBackslash && c == '"';
+//        wasBackslash = c == '\\';
+//        return !match; }, in, out);
+//
+//    getExpect([](const char c) {
+//        return c == '"'; }, in, out);
+//
+//    return {TokenType::string, out.str(), pos};
+//}
+//
+///// Regex:
+///// '\\?.'                11.character literal
+//Token lexCharacter(CharStream& in)
+//{
+//    using namespace std;
+//
+//    char c;
+//    bool wasBackslash = false;
+//    stringstream out;
+//    Caret pos = in.pos();
+//
+//    out << in.get(); // first single quote
+//
+//    c = in.get();
+//    out << c;
+//    if (c == '\\') {
+//        out << in.get(); // get escaped char
+//    }
+//    out << in.get(); // ending single quote
+//
+//    if (in.eof()) {
+//        throw runtime_error("Unexpected EOF while scanning for character literal.");
+//    }
+//
+//    return {TokenType::character, out.str(), pos};
+//}
+//
+///// Regex:
+///// (                     4.left paren
+//Token lexLeftParen(CharStream& in)
+//{
+//    return {TokenType::leftParen, in.get(), in.pos()};
+//}
+//
+///// Regex:
+///// )                     5.right paren
+//Token lexRightParen(CharStream& in)
+//{
+//    return {TokenType::rightParen, in.get(), in.pos()};
+//}
+//
+///// Regex:
+///// 0                     12.zero
+///// 0x[0-9a-fA-F]+        6.hex number
+///// 0[0-7]+               7.octal number
+//Token lexZeroHexOctal(CharStream& in)
+//{
+//    using namespace std;
+//
+//    char c;
+//    stringstream out;
+//    Caret pos = in.pos();
+//
+//    out << in.get(); // prefix zero
+//
+//    c = in.get();
+//    if (in.eof() || !(isdigit(c) || c == 'x')) { // Zero
+//        return {TokenType::integer, '0', pos};
+//    } else if (c == 'x') { // Hex
+//        out << c; // x
+//        // There must be at least one digit after the x
+//        c = in.peek();
+//        if (!isHexDigit(c) || in.eof()) {
+//            throw runtime_error("For a hex value, there must be at least one valid hex digit after the '0x'.");
+//        }
+//        out << in.get(); // 1st digit
+//        while (true) {
+//            c = in.peek();
+//            if (isHexDigit(c) && !in.eof()) {
+//                out << in.get();
+//            } else {
+//                break;
+//            }
+//        }
+//        return {TokenType::integer, out.str(), pos};
+//    } else { // Octal
+//        throw runtime_error("Octal not implemented.");
+//    }
+//}
+//
+///// Regex:
+///// -?([1-9][0-9]*)?((\.?[0-9]+[df]?)|\.)     8.(+/-) int or float or double
+//Token lexNumber(CharStream& in)
+//{
+//    using namespace std;
+//
+//    char c;
+//    stringstream out;
+//
+//    c = in.peek();
+//    if (c == '-') {
+//        out << in.get(); // negative
+//        c = in.peek();
+//        if (!(isdigit(c) || c == '.')) {
+//            lexIdentifier(in, out.str());
+//        }
+//    }
+//    if (c == 0) {
+//        throw runtime_error("Number cannot start with zero");
+//    }
+//
+//
+//
+//
+//    return {TokenType::integer, "404", Caret()};
+//
+//    // stringstream out;
+//    // Caret pos = in.pos();
+//
+//    // char c = in.get();
+//    // if (c == '-') {
+//    //     c = in.get();
+//    //     if ( !isdigit(c) && !(c == '.') ) {
+//
+//    //     }
+//    // }
+//}
+//
+///// Regex:
+///// \s+                   10.whitespace
+//Token lexWhitespace(CharStream& in)
+//{
+//    using namespace std;
+//
+//    std::stringstream out;
+//    Caret pos = in.pos();
+//    char c;
+//
+//    while (true)
+//    {
+//        c = in.peek();
+//
+//        if (in.eof()) {
+//            goto no_more_whitespace;
+//        }
+//
+//        if (isspace(c)) {
+//            out << (char)in.get();
+//        } else {
+//            goto no_more_whitespace;
+//        }
+//    }
+//    no_more_whitespace:;
+//
+//    return {TokenType::whitespace, out.str(), pos};
+//}
+//
+///// Regex:
+///// [A-Za-z\+\-\*\/\!\@\#\$\%\^\&\*][A-Za-z0-9\+\-\*\/\!\@\#\$\%\^\&\*]*       9.identifier
+//Token lexIdentifier(CharStream& in)
+//{
+//    using namespace std;
+//
+//    stringstream out;
+//    Caret pos = in.pos();
+//
+//    while ( (isalnum(in.peek()) || (ispunct(in.peek()) && in.peek() != ')')) && !in.eof() ) {
+//        out << (char)in.get();
+//    }
+//
+//    string s = out.str();
+//
+//    if (s == "fn") {
+//        return {TokenType::keyword, s, pos};
+//    }
+//
+//    return {TokenType::literal, s, pos};
+//}
 
 } // anonymous namespace
 
@@ -573,47 +620,35 @@ Token TokenStream::get()
 
     if (mStreamStart) {
         mStreamStart = false;
-        return Token(TokenType::start, "start", mIn->pos());
+        return {TokenType::start, "start", mIn->pos()};
     }
 
-    char c = mIn->peek();
+    Caret pos = mIn->pos();
+    char c;
 
     if (mIn->eof()) {
-        return Token(TokenType::eof, "eof", mIn->pos());
+        return {TokenType::eof, "eof", pos};
     }
 
     std::stringstream out;
-    ScanInt i;
-    ScanFloat f;
-    ScanWhitespace w;
-    std::vector<ScannerBase*> scanners{&i, &f, &w};
+    ScannerSet scannerSet;
 
-    // Keep track of previous acceptance states
-    std::vector<ScannerBase::Acceptance> accs;
-    for (const ScannerBase* scanner : scanners) {
-        accs.emplace_back(scanner->acceptance());
-    }
+    while (true) {
+        c = mIn->peek();
 
-    std::string testStr = "-239842341.234589283 other";
-    for (const char c : testStr) {
-        for (ScannerBase* scanner : scanners) {
-            scanner->matchChar(c);
-        }
-
-        bool allReject = true;
-        for (const ScannerBase* scanner : scanners) {
-            if (scanner->acceptance() != ScannerBase::Acceptance::rejected) {
-                allReject = false;
-            }
-        }
-        if (allReject) {
+        scannerSet.matchChar(c);
+        if (scannerSet.allRejected()) {
             break;
         }
 
-        out << c;
+        out << mIn->get();
     }
 
-    throw runtime_error("WIP");
+    shared_ptr<ScannerBase> acceptedScanner = scannerSet.lastAcceptedScanner();
+
+    return {acceptedScanner->tokenType(), out.str(), pos};
+
+    // throw runtime_error("WIP");
 
     // Lexer regular language:
     // \/\/.*|\/\*(.|\n)*\*\/|".*?"|'\\?.'|[()]|0x[0-9a-fA-F]+|0[0-7]0|-?([1-9][0-9]*)?((\.?[0-9]+[df]?)|\.)|[A-Za-z\+\-\*\/\!\@\#\$\%\^\&\*][A-Za-z0-9\+\-\*\/\!\@\#\$\%\^\&\*]*|\s+
@@ -641,7 +676,7 @@ Token TokenStream::get()
     // 0    6|7  zero or hex or octal number
     // -    8    negative number
     // 1-9  8    positive number
-    // .    8    floatingpoint number
+    // .    8    floatingPoint number
     //      10   whitespace
     // !0-9 9    identifier
 
@@ -687,7 +722,7 @@ namespace tests { // lexer::tests
 
 namespace {
 
-void testHelper(ScannerBase&& scanner, ScannerBase::Acceptance expectedResult, std::string testString)
+void testHelper(ScannerBase&& scanner, ScannerBase::Acceptance expectedResult, const std::string& testString)
 {
     for (const char c : testString) {
         scanner.matchChar(c);
@@ -702,7 +737,7 @@ void testHelper(ScannerBase&& scanner, ScannerBase::Acceptance expectedResult, s
 
 } // lexer::tests::anonymous namespace
 
-void testScanNumber()
+[[maybe_unused]] void testScanNumber()
 {
     ScanInt i;
     ScanFloat f;
@@ -731,7 +766,7 @@ void testScanNumber()
     std::cout << "Lexed: '" << out.str() << "'" << std::endl;
 }
 
-void testScanInt()
+[[maybe_unused]] void testScanInt()
 {
     using acc = ScannerBase::Acceptance;
     testHelper(ScanInt(), acc::accepted, "0");
@@ -748,7 +783,7 @@ void testScanInt()
     testHelper(ScanInt(), acc::rejected, "num");
 }
 
-void testScanFloat()
+[[maybe_unused]] void testScanFloat()
 {
     using acc = ScannerBase::Acceptance;
     testHelper(ScanFloat(), acc::accepted, "0.0");
