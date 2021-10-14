@@ -646,7 +646,12 @@ Token TokenStream::get()
 
     shared_ptr<ScannerBase> acceptedScanner = scannerSet.lastAcceptedScanner();
 
-    return {acceptedScanner->tokenType(), out.str(), pos};
+    if (acceptedScanner) {
+        return {acceptedScanner->tokenType(), out.str(), pos};
+    } else {
+        return {TokenType::error, "", pos};
+    }
+
 
     // throw runtime_error("WIP");
 

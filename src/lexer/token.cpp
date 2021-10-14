@@ -5,7 +5,7 @@
 
 namespace lexer {
 
-const std::string tokenTypeName(const TokenType& type)
+std::string tokenTypeName(const TokenType& type)
 {
 
     switch (type)
@@ -22,11 +22,11 @@ const std::string tokenTypeName(const TokenType& type)
     case TokenType::rightParen:    return "RPAR";
     case TokenType::whitespace:    return "WHIT";
     case TokenType::eof:           return "EOF";
+    case TokenType::error:         return "ERR";
     }
-    return "???"; // Should not get here
 }
 
-const TokenType charToTokenType(const char shorthand)
+TokenType charToTokenType(const char shorthand)
 {
     switch (shorthand) {
     case '0': return TokenType::start;
@@ -41,8 +41,9 @@ const TokenType charToTokenType(const char shorthand)
     case ')': return TokenType::rightParen;
     case ' ': return TokenType::whitespace;
     case '1': return TokenType::eof;
+    default:
+        return TokenType::error;
     }
-    return TokenType::eof; // Should not get here
 }
 
 std::string Token::description() const
@@ -60,22 +61,22 @@ std::string Token::description() const
     return out.str();
 }
 
-std::string Token::asString() const
+[[maybe_unused]] std::string Token::asString() const
 {
     return std::get<const std::string>(mData);
 }
 
-long Token::asLong() const
+[[maybe_unused]] long Token::asLong() const
 {
     return std::get<const long>(mData);
 }
 
-double Token::asDouble() const
+[[maybe_unused]] double Token::asDouble() const
 {
     return std::get<const double>(mData);
 }
 
-char Token::asChar() const
+[[maybe_unused]] char Token::asChar() const
 {
     return std::get<const char>(mData);
 }
