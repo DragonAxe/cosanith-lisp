@@ -150,6 +150,62 @@ public:
 
 
 ///
+/// (      Left parenthesis
+/// )      Right parenthesis
+class ScanParen : public ScannerBase
+{
+public:
+    enum class States {
+        start,
+        lParen,
+        rParen,
+        reject,
+    } mState = States::start;
+    bool mIsLeft = false;
+
+    void matchChar(char c) override
+    {
+        switch (mState)
+        {
+            case States::start:
+                if (c == '(') { mState = States::lParen; mIsLeft = true; }
+                else if (c == ')') { mState = States::rParen; mIsLeft = false; }
+                else { mState = States::reject; }
+                break;
+            case States::lParen:
+            case States::rParen:
+                mState = States::reject;
+                break;
+            default: break;
+        }
+    }
+
+    [[nodiscard]] Acceptance acceptance() const override
+    {
+        switch (mState)
+        {
+            case States::lParen:
+            case States::rParen:
+                return Acceptance::accepted;
+
+            case States::start:
+                return Acceptance::undetermined;
+
+            default:
+                return Acceptance::rejected;
+        }
+    }
+    [[nodiscard]] TokenType tokenType() const override
+    {
+        if (mIsLeft) {
+            return TokenType::leftParen;
+        } else {
+            return TokenType::rightParen;
+        }
+    }
+};
+
+///
 /// \w+                         Whitespace
 class ScanWhitespace : public ScannerBase
 {
@@ -335,9 +391,10 @@ private:
 public:
     ScannerSet()
     {
-        mScanners.emplace_back(std::make_shared<ScanWhitespace>());
-        mScanners.emplace_back(std::make_shared<ScanFloat>());
+        mScanners.emplace_back(std::make_shared<ScanParen>());
         mScanners.emplace_back(std::make_shared<ScanInt>());
+        mScanners.emplace_back(std::make_shared<ScanFloat>());
+        mScanners.emplace_back(std::make_shared<ScanWhitespace>());
         // Pre-initialize mPrevAcceptance to same size as mScanners
         for (auto& scanner : mScanners) {
             mPrevAcceptance.emplace_back(scanner->acceptance());
@@ -649,7 +706,7 @@ Token TokenStream::get()
     if (acceptedScanner) {
         return {acceptedScanner->tokenType(), out.str(), pos};
     } else {
-        return {TokenType::error, "", pos};
+        return {TokenType::error, std::string(1, c), pos};
     }
 
 
