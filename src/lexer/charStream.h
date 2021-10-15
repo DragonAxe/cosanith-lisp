@@ -9,8 +9,8 @@ namespace lexer {
 class Caret
 {
 public:
-    long line() const {return mLine;}
-    long col() const {return mCol;}
+    [[nodiscard]] long line() const {return mLine;}
+    [[nodiscard]] long col() const {return mCol;}
 
     void nextLine();
     void nextChar();
@@ -29,11 +29,11 @@ public:
 
     virtual char peek() = 0;
     virtual char get() = 0;
-    virtual bool eof() const = 0;
+    [[nodiscard]] virtual bool eof() const = 0;
     
     // Concrete methods:
 
-    Caret pos() const { return mPos; }
+    [[nodiscard]] Caret pos() const { return mPos; }
 
 protected:
     Caret mPos;
@@ -44,17 +44,12 @@ class FileCharStream : public CharStream
 {
 public:
     /// Opens the given file for reading.
-    explicit FileCharStream(const std::string filename);
+    explicit FileCharStream(std::string  filename);
 
     // Pass through methods to std::ifstream:
-
     char peek() override;
     char get() override;
     bool eof() const override;
-
-    // Additional methods:
-
-    Caret pos() const;
 
 private:
     const std::string mFilename;
@@ -66,22 +61,16 @@ class StrCharStream : public CharStream
 {
 public:
     /// Opens the given file for reading.
-    explicit StrCharStream(const std::string src);
-
-    // Pass through methods to std::ifstream:
+    explicit StrCharStream(std::string  src);
 
     char peek() override;
     char get() override;
-    bool eof() const override;
-
-    // Additional methods:
-
-    Caret pos() const;
+    [[nodiscard]] bool eof() const override;
 
 private:
     const std::string mSrc;
     long mSrcPos = 0;
-    bool mEof;
+    bool mEof = false;
 };
 
 } // namespace lexer

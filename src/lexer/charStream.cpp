@@ -1,5 +1,7 @@
 #include <charStream.h>
 
+#include <utility>
+
 namespace lexer {
 
 //
@@ -23,12 +25,12 @@ std::string Caret::str()
 }
 
 //
-// FileCharStream -----------------------------------------------------------------
+// FileCharStream -------------------------------------------------------------
 //
 
-FileCharStream::FileCharStream(const std::string filename) : mFilename(filename)
+FileCharStream::FileCharStream(std::string filename) : mFilename(std::move(filename))
 {
-    mIn.open(filename);
+    mIn.open(mFilename);
 }
 
 char FileCharStream::peek()
@@ -58,16 +60,11 @@ bool FileCharStream::eof() const
     return mIn.eof();
 }
 
-Caret FileCharStream::pos() const
-{
-    return Caret(mPos);
-}
-
 //
 // StrCharStream --------------------------------------------------------------
 //
 
-StrCharStream::StrCharStream(const std::string src) : mSrc(src)
+StrCharStream::StrCharStream(std::string  src) : mSrc(std::move(src))
 {}
 
 char StrCharStream::peek()
@@ -99,11 +96,6 @@ char StrCharStream::get()
 bool StrCharStream::eof() const
 {
     return mEof;
-}
-
-Caret StrCharStream::pos() const
-{
-    return Caret(mPos);
 }
 
 } // namespace lexer
