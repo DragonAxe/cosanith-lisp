@@ -515,6 +515,55 @@ public:
 };
 
 ///
+/// \w+                         Whitespace
+class ScanIdentifier : public ScannerBase {
+public:
+    enum class States {
+        start,
+        firstChar,
+        reject,
+    } mState = States::start;
+
+    void matchChar(char c) override {
+        switch (mState) {
+            case States::start:
+                if (isspace(c)) { mState = States::reject; }
+                else if (isdigit(c)) { mState = States::reject; }
+                else if (c == '(') { mState = States::reject; }
+                else if (c == ')') { mState = States::reject; }
+                else { mState = States::firstChar; }
+                break;
+            case States::firstChar:
+                if (isspace(c)) { mState = States::reject; }
+                else if (c == '(') { mState = States::reject; }
+                else if (c == ')') { mState = States::reject; }
+                break;
+            default:
+                break;
+        }
+    }
+
+    [[nodiscard]] Acceptance acceptance() const override {
+        switch (mState) {
+            case States::firstChar:
+                return Acceptance::accepted;
+            case States::start:
+                return Acceptance::undetermined;
+            default:
+                return Acceptance::rejected;
+        }
+    }
+
+    [[nodiscard]] TokenType tokenType() const override {
+        return TokenType::identifier;
+    }
+
+    [[nodiscard]] static bool isKeyword(const std::string& identifier) {
+        return identifier == "fn";
+    }
+};
+
+///
 class ScannerSet {
 private:
     std::vector<std::shared_ptr<ScannerBase>> mScanners;
@@ -529,6 +578,7 @@ public:
         mScanners.emplace_back(std::make_shared<ScanString>());
         mScanners.emplace_back(std::make_shared<ScanCharLiteral>());
         mScanners.emplace_back(std::make_shared<ScanWhitespace>());
+        mScanners.emplace_back(std::make_shared<ScanIdentifier>());
         // Pre-initialize mPrevAcceptance to same size as mScanners
         for (auto &scanner: mScanners) {
             mPrevAcceptance.emplace_back(scanner->acceptance());
@@ -571,7 +621,7 @@ Token TokenStream::get() {
     // \/\/.*                1.single line comment
     // \/\*(.|\n)*\*\/       2.multi-line comment
     // ".*?"                 3.string
-    // '\\?.'                11.character literal
+    // '\\?.'                11.character identifier
     // (                     4.left paren
     // )                     5.right paren
     // 0                     12. zero
@@ -584,7 +634,7 @@ Token TokenStream::get() {
     // First character to token map (state transition map)
     // /    1|2  single or multi- line comment
     // "    3    string
-    // '    11   character literal
+    // '    11   character identifier
     // (    4    left paren
     // )    5    right paren
     // 0    6|7  zero or hex or octal number
@@ -625,6 +675,10 @@ Token TokenStream::get() {
     shared_ptr<ScannerBase> acceptedScanner = scannerSet.lastAcceptedScanner();
 
     if (acceptedScanner) {
+        string tokenString = out.str();
+        if (acceptedScanner->tokenType() == TokenType::identifier && ScanIdentifier::isKeyword(tokenString)) {
+            return {TokenType::keyword, tokenString, pos};
+        }
         return {acceptedScanner->tokenType(), out.str(), pos};
     } else {
         return {TokenType::error, std::string(1, c), pos};

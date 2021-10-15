@@ -216,7 +216,7 @@ bool expectTokens(const std::string& note, CharStreamT &&in, const std::string& 
 
 bool lexTests() {
     bool success = true;
-    success &= expectTokens("literal   ", lexer::StrCharStream("text"), "0l1");
+    success &= expectTokens("identifier", lexer::StrCharStream("text"), "0n1");
     success &= expectTokens("1L-comment", lexer::StrCharStream("// comment"), "0/1");
     success &= expectTokens("1L-comm /n", lexer::StrCharStream("// comment\n"), "0/1");
     success &= expectTokens("ML-comment", lexer::StrCharStream("/* **comment** */"), "0/1");
@@ -225,7 +225,7 @@ bool lexTests() {
     success &= expectTokens("integer   ", lexer::StrCharStream("5"), "0i1");
     success &= expectTokens("int-neg   ", lexer::StrCharStream("-5"), "0i1");
     success &= expectTokens("hex       ", lexer::StrCharStream("0xdEAdB33F"), "0i1");
-    // success &= expectTokens("oct       ", lexer::StrCharStream("05723"), "0i1"); // Not implemented
+    success &= expectTokens("oct       ", lexer::StrCharStream("05723"), "0i1");
     success &= expectTokens("string    ", lexer::StrCharStream("\"string\""), "0s1");
     success &= expectTokens("string+W  ", lexer::StrCharStream("\"string w\nspace\""), "0s1");
     success &= expectTokens("string+Quo", lexer::StrCharStream(R"("<\"\">")"), "0s1");
@@ -242,8 +242,8 @@ bool lexTests() {
     success &= expectTokens("Integers ", lexer::StrCharStream("(2 4 6 8)"), "0(i i i i)1");
     success &= expectTokens("Negatives", lexer::StrCharStream("(-2 -4 -6 -8)"), "0(i i i i)1");
     success &= expectTokens("Floats   ", lexer::StrCharStream("(2.5 4.8)"), "0(f f)1");
-    success &= expectTokens("Function ", lexer::StrCharStream("(fn (a) (* 2 a))"), "0(k (l) (l i l))1");
-    success &= expectTokens("Subtraction", lexer::StrCharStream("(- 2 5)"), "0(l i i)1");
+    success &= expectTokens("Function ", lexer::StrCharStream("(fn (a) (* 2 a))"), "0(k (n) (n i n))1");
+    success &= expectTokens("Subtraction", lexer::StrCharStream("(- 2 5)"), "0(n i i)1");
     // expectTokens("File", lexer::FileCharStream("../files/lisp.rp"));
     return success;
 }

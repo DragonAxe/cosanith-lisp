@@ -87,7 +87,7 @@ namespace parser {
 //     Node* element = getAt(index);
 
 //     if (element->type != NodeType::leaf) {
-//         throw std::runtime_error("Node at index " + to_string(index) + " is not a literal: " + element->toFlatStr());
+//         throw std::runtime_error("Node at index " + to_string(index) + " is not a identifier: " + element->toFlatStr());
 //     }
 
 //     return get<const token::Token*>(element->item)->dataToString();
@@ -123,7 +123,7 @@ ConsNode parseTokens(lexer::CharStream& cs)
 
     //     switch (tok.type)
     //     {
-    //     case token::TokenType::literal:
+    //     case token::TokenType::identifier:
     //         get<vector<Node*>>(nodes.top()->item).emplace_back(new Node{NodeType::leaf, tok});
     //         break;
     //     case token::TokenType::integer:

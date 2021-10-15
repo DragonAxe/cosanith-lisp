@@ -14,7 +14,7 @@ enum class TokenType {
     start,
     comment,
     keyword,
-    literal,
+    identifier,
     integer,
     floatpt,
     character,
