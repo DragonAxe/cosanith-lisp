@@ -229,6 +229,7 @@ bool lexTests()
     // success &= expectTokens("oct       ", lexer::StrCharStream("05723"), "0i1"); // Not implemented
     success &= expectTokens("string    ", lexer::StrCharStream("\"string\""), "0s1");
     success &= expectTokens("string+W  ", lexer::StrCharStream("\"string w\nspace\""), "0s1");
+    success &= expectTokens("string+Quo", lexer::StrCharStream(R"("<\"\">")"), "0s1");
     success &= expectTokens("floatpt   ", lexer::StrCharStream("2.5"), "0f1");
     success &= expectTokens("floatneg  ", lexer::StrCharStream("-2.5"), "0f1");
     success &= expectTokens("char      ", lexer::StrCharStream("'c'"), "0c1");

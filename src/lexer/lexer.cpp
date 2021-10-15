@@ -149,6 +149,59 @@ public:
 // };
 
 
+/// ".*"                       String literal
+class ScanString : public ScannerBase
+{
+public:
+    enum class States {
+        start,
+        openQuote,
+        content,
+        escapeSlash,
+        closeQuote,
+        reject,
+    } mState = States::start;
+
+    void matchChar(char c) override {
+        switch (mState) {
+            case States::start:
+                if (c == '"') { mState = States::openQuote; }
+                else { mState = States::reject; }
+                break;
+            case States::openQuote:
+                if (c != '\\') { mState = States::content; }
+                else { mState = States::escapeSlash; }
+                break;
+            case States::content:
+                if (c == '"') { mState = States::closeQuote; }
+                else if (c == '\\') { mState = States::escapeSlash; }
+                break;
+            case States::escapeSlash:
+                mState = States::content;
+                break;
+            case States::closeQuote:
+                mState = States::reject;
+                break;
+            default: break;
+        }
+    }
+
+    [[nodiscard]] Acceptance acceptance() const override {
+        switch (mState) {
+            case States::closeQuote: return Acceptance::accepted;
+            case States::start:
+            case States::openQuote:
+            case States::content:
+            case States::escapeSlash: return Acceptance::undetermined;
+            default: return Acceptance::rejected;
+        }
+    }
+
+    [[nodiscard]] TokenType tokenType() const override {
+        return TokenType::string;
+    }
+};
+
 ///
 /// (      Left parenthesis
 /// )      Right parenthesis
@@ -394,6 +447,7 @@ public:
         mScanners.emplace_back(std::make_shared<ScanParen>());
         mScanners.emplace_back(std::make_shared<ScanInt>());
         mScanners.emplace_back(std::make_shared<ScanFloat>());
+        mScanners.emplace_back(std::make_shared<ScanString>());
         mScanners.emplace_back(std::make_shared<ScanWhitespace>());
         // Pre-initialize mPrevAcceptance to same size as mScanners
         for (auto& scanner : mScanners) {
