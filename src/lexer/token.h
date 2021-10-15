@@ -10,8 +10,7 @@ namespace lexer {
 
 /// @see Token
 /// @see tokenTypeName for string representation.
-enum class TokenType
-{
+enum class TokenType {
     start,
     comment,
     keyword,
@@ -22,19 +21,19 @@ enum class TokenType
     string,
     leftParen,
     rightParen,
-    whitespace, 
+    whitespace,
     eof,
     error,
 };
 
 /// Converts enum class to string representation.
 /// ...because 'enum class'es can't have methods...
-std::string tokenTypeName(const TokenType& type);
+std::string tokenTypeName(const TokenType &type);
+
 TokenType charToTokenType(char shorthand);
 
 /// Represents a group of characters with attached meaning and no hierarchical structure.
-class Token
-{
+class Token {
 public: // Members:
     const TokenType mType;
     const std::variant<const std::string, const long, const double, const char> mData;
@@ -43,16 +42,20 @@ public: // Members:
 
 public: // Methods:
     Token(TokenType type, std::string chars, Caret pos) : mType(type), mSrcString(std::move(chars)), mSrcPos(pos) {}
+
     Token(TokenType type, char chars, Caret pos) : mType(type), mSrcString(std::string() + chars), mSrcPos(pos) {}
 
     // Data access convenience methods:
 
     /// Equivelent to std::get<std::string>(). Use if `type` is a string.
     [[maybe_unused]] [[nodiscard]] std::string asString() const;
+
     /// Equivelent to std::get<long>(). Use if `type` is a long.
     [[maybe_unused]] [[nodiscard]] long asLong() const;
+
     /// Equivelent to std::get<double>(). Use if `type` is a double.
     [[maybe_unused]] [[nodiscard]] double asDouble() const;
+
     /// Equivelent to std::get<char>(). Use if `type` is a char.
     [[maybe_unused]] [[nodiscard]] char asChar() const;
 

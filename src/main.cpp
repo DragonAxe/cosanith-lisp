@@ -88,7 +88,7 @@
 
 //     void prettyPrint(int indent) override
 //     {
-        
+
 //     }
 // };
 
@@ -109,7 +109,7 @@
 //         //     args.emplace_back(get<token::Token*>(arg->item));
 //         // }
 //         // Node* statementList = parseTree->getAt(3);
-        
+
 //         // string keyword = statementList->first();
 //         // if (keyword == "fn") {
 //         //     statement = new AstFnDef(statementList);
@@ -148,7 +148,7 @@
 //         if (parseTree->type == NodeType::list) {
 //             auto list = std::get<std::vector<Node*>>(parseTree->item);
 //             for (auto& statement : list) {
-                
+
 //                 std::string keyword = statement->first();
 //                 if (keyword == "fn") {
 //                     definitions.emplace_back(new AstFnDef(statement));
@@ -181,25 +181,25 @@
 // };
 
 template<class CharStreamT>
-bool expectTokens(std::string note, CharStreamT&& in, std::string expectedSequence, bool debug = false)
-{
+bool expectTokens(const std::string& note, CharStreamT &&in, const std::string& expectedSequence, bool debug = false) {
     using namespace std;
 
-    static_assert(std::is_base_of<lexer::CharStream, CharStreamT>::value, "Input stream parameter must inherit from lexer::CharStream.");
+    static_assert(std::is_base_of<lexer::CharStream, CharStreamT>::value,
+                  "Input stream parameter must inherit from lexer::CharStream.");
 
     bool success = true;
     lexer::TokenStream ts(make_shared<CharStreamT>(in));
-    
+
     cout << "#### " << note << " #### ";
     if (debug) { cout << endl; }
 
-    for (const char c : expectedSequence)
-    {
+    for (const char c: expectedSequence) {
         lexer::Token tok = ts.get();
         lexer::TokenType type = lexer::charToTokenType(c);
         if (tok.mType != type || debug) {
             if (!debug) { cout << "Failed: "; }
-            cout << "Expected " << c << "-" << lexer::tokenTypeName(type) << ": " << tok.description() << " at " << in.pos().str() << endl;
+            cout << "Expected " << c << "-" << lexer::tokenTypeName(type) << ": " << tok.description() << " at "
+                 << in.pos().str() << endl;
         }
         if (tok.mType != type) {
             success = false;
@@ -214,8 +214,7 @@ bool expectTokens(std::string note, CharStreamT&& in, std::string expectedSequen
     return success;
 }
 
-bool lexTests()
-{
+bool lexTests() {
     bool success = true;
     success &= expectTokens("literal   ", lexer::StrCharStream("text"), "0l1");
     success &= expectTokens("1L-comment", lexer::StrCharStream("// comment"), "0/1");
@@ -250,8 +249,7 @@ bool lexTests()
 }
 
 
-int main()
-{
+int main() {
     // using namespace std;
 
     // lexer::FileCharStream in("/home/dragonaxe/Documents/programming_conan/calculator/lisp.rp");
@@ -263,11 +261,11 @@ int main()
     // lexer::tests::testScanInt();
     // lexer::tests::testScanFloat();
 
-//     Node* root = parseNodes(in);
-//     // root->prettyPrint();
-//     AstFile ast(root);
-//     ast.prettyPrint(0);
-//     delete root;
+    //     Node* root = parseNodes(in);
+    //     // root->prettyPrint();
+    //     AstFile ast(root);
+    //     ast.prettyPrint(0);
+    //     delete root;
 
     // while (true)
     // {

@@ -9,46 +9,46 @@
 
 namespace {
 
-[[maybe_unused]] char ctrlCharToChar(const char c)
-{
+[[maybe_unused]] char ctrlCharToChar(const char c) {
     switch (c) {
-    case '\\': return '\\';
-    case 'n': return '\n';
-    case '"': return '"';
-    default:
-        return c;
+        case '\\':
+            return '\\';
+        case 'n':
+            return '\n';
+        case '"':
+            return '"';
+        default:
+            return c;
     }
 }
 
-[[maybe_unused]] bool isHexDigit(const char c)
-{
-    switch (c)
-    {
-    case '0':
-    case '1':
-    case '2':
-    case '3':
-    case '4':
-    case '5':
-    case '6':
-    case '7':
-    case '8':
-    case '9':
-    case 'a':
-    case 'b':
-    case 'c':
-    case 'd':
-    case 'e':
-    case 'f':
-    case 'A':
-    case 'B':
-    case 'C':
-    case 'D':
-    case 'E':
-    case 'F':
-        return true;
-    default:
-        return false;
+[[maybe_unused]] bool isHexDigit(const char c) {
+    switch (c) {
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+        case 'a':
+        case 'b':
+        case 'c':
+        case 'd':
+        case 'e':
+        case 'f':
+        case 'A':
+        case 'B':
+        case 'C':
+        case 'D':
+        case 'E':
+        case 'F':
+            return true;
+        default:
+            return false;
     }
 }
 
@@ -102,16 +102,18 @@ namespace {
 //
 
 ///
-class ScannerBase
-{
+class ScannerBase {
 public:
     enum class Acceptance {
         accepted,
         rejected,
         undetermined,
     };
+
     virtual void matchChar(char c) = 0;
+
     [[nodiscard]] virtual Acceptance acceptance() const = 0;
+
     [[nodiscard]] virtual TokenType tokenType() const = 0;
 };
 
@@ -150,8 +152,7 @@ public:
 
 
 /// ".*"                       String literal
-class ScanString : public ScannerBase
-{
+class ScanString : public ScannerBase {
 public:
     enum class States {
         start,
@@ -182,18 +183,22 @@ public:
             case States::closeQuote:
                 mState = States::reject;
                 break;
-            default: break;
+            default:
+                break;
         }
     }
 
     [[nodiscard]] Acceptance acceptance() const override {
         switch (mState) {
-            case States::closeQuote: return Acceptance::accepted;
+            case States::closeQuote:
+                return Acceptance::accepted;
             case States::start:
             case States::openQuote:
             case States::content:
-            case States::escapeSlash: return Acceptance::undetermined;
-            default: return Acceptance::rejected;
+            case States::escapeSlash:
+                return Acceptance::undetermined;
+            default:
+                return Acceptance::rejected;
         }
     }
 
@@ -205,8 +210,7 @@ public:
 ///
 /// (      Left parenthesis
 /// )      Right parenthesis
-class ScanParen : public ScannerBase
-{
+class ScanParen : public ScannerBase {
 public:
     enum class States {
         start,
@@ -216,27 +220,28 @@ public:
     } mState = States::start;
     bool mIsLeft = false;
 
-    void matchChar(char c) override
-    {
-        switch (mState)
-        {
+    void matchChar(char c) override {
+        switch (mState) {
             case States::start:
-                if (c == '(') { mState = States::lParen; mIsLeft = true; }
-                else if (c == ')') { mState = States::rParen; mIsLeft = false; }
-                else { mState = States::reject; }
+                if (c == '(') {
+                    mState = States::lParen;
+                    mIsLeft = true;
+                } else if (c == ')') {
+                    mState = States::rParen;
+                    mIsLeft = false;
+                } else { mState = States::reject; }
                 break;
             case States::lParen:
             case States::rParen:
                 mState = States::reject;
                 break;
-            default: break;
+            default:
+                break;
         }
     }
 
-    [[nodiscard]] Acceptance acceptance() const override
-    {
-        switch (mState)
-        {
+    [[nodiscard]] Acceptance acceptance() const override {
+        switch (mState) {
             case States::lParen:
             case States::rParen:
                 return Acceptance::accepted;
@@ -248,8 +253,8 @@ public:
                 return Acceptance::rejected;
         }
     }
-    [[nodiscard]] TokenType tokenType() const override
-    {
+
+    [[nodiscard]] TokenType tokenType() const override {
         if (mIsLeft) {
             return TokenType::leftParen;
         } else {
@@ -260,8 +265,7 @@ public:
 
 ///
 /// \w+                         Whitespace
-class ScanWhitespace : public ScannerBase
-{
+class ScanWhitespace : public ScannerBase {
 public:
     enum class States {
         start,
@@ -269,43 +273,39 @@ public:
         reject,
     } mState = States::start;
 
-    void matchChar(char c) override
-    {
-        switch (mState)
-        {
-        case States::start:
+    void matchChar(char c) override {
+        switch (mState) {
+            case States::start:
             case States::whitespace:
-            if (isspace(c)) { mState = States::whitespace; }
-            else { mState = States::reject; }
-            break;
-        default: break;
+                if (isspace(c)) { mState = States::whitespace; }
+                else { mState = States::reject; }
+                break;
+            default:
+                break;
         }
     }
 
-    [[nodiscard]] Acceptance acceptance() const override
-    {
-        switch (mState)
-        {
-        case States::whitespace:
-            return Acceptance::accepted;
+    [[nodiscard]] Acceptance acceptance() const override {
+        switch (mState) {
+            case States::whitespace:
+                return Acceptance::accepted;
 
-        case States::start:
-            return Acceptance::undetermined;
+            case States::start:
+                return Acceptance::undetermined;
 
-        default:
-            return Acceptance::rejected;
+            default:
+                return Acceptance::rejected;
         }
     }
-    [[nodiscard]] TokenType tokenType() const override
-    {
+
+    [[nodiscard]] TokenType tokenType() const override {
         return TokenType::whitespace;
     }
 };
 
 ///
 /// -?[0-9]*\.[0-9]+[df]?           8.(+/-) float or double
-class ScanFloat : public ScannerBase
-{
+class ScanFloat : public ScannerBase {
 public:
     enum class States {
         start,
@@ -317,66 +317,62 @@ public:
         reject,
     } mState = States::start;
 
-    void matchChar(char c) override
-    {
-        switch (mState)
-        {
-        case States::start:
-            if (c == '-') { mState = States::negative; }
-            else if (isdigit(c)) { mState = States::whole; }
-            else if (c == '.') { mState = States::point; }
-            else { mState = States::reject; }
-            break;
-        case States::negative:
-        case States::whole:
-            if (isdigit(c)) { mState = States::whole; }
-            else if (c == '.') { mState = States::point; }
-            else { mState = States::reject; }
-            break;
-        case States::point:
-            if (isdigit(c)) { mState = States::fract; }
-            else { mState = States::reject; }
-            break;
-        case States::fract:
-            if (isdigit(c)) { mState = States::fract; }
-            else if (c == 'f' || c == 'd') { mState = States::suffix; }
-            else { mState = States::reject; }
-            break;
-        case States::suffix:
-            mState = States::reject;
-            break;
-        default: break;
+    void matchChar(char c) override {
+        switch (mState) {
+            case States::start:
+                if (c == '-') { mState = States::negative; }
+                else if (isdigit(c)) { mState = States::whole; }
+                else if (c == '.') { mState = States::point; }
+                else { mState = States::reject; }
+                break;
+            case States::negative:
+            case States::whole:
+                if (isdigit(c)) { mState = States::whole; }
+                else if (c == '.') { mState = States::point; }
+                else { mState = States::reject; }
+                break;
+            case States::point:
+                if (isdigit(c)) { mState = States::fract; }
+                else { mState = States::reject; }
+                break;
+            case States::fract:
+                if (isdigit(c)) { mState = States::fract; }
+                else if (c == 'f' || c == 'd') { mState = States::suffix; }
+                else { mState = States::reject; }
+                break;
+            case States::suffix:
+                mState = States::reject;
+                break;
+            default:
+                break;
         }
     }
 
-    [[nodiscard]] Acceptance acceptance() const override
-    {
-        switch (mState)
-        {
-        case States::fract:
-        case States::suffix:
-            return Acceptance::accepted;
+    [[nodiscard]] Acceptance acceptance() const override {
+        switch (mState) {
+            case States::fract:
+            case States::suffix:
+                return Acceptance::accepted;
 
-        case States::start:
-        case States::negative:
-        case States::whole:
-        case States::point:
-            return Acceptance::undetermined;
+            case States::start:
+            case States::negative:
+            case States::whole:
+            case States::point:
+                return Acceptance::undetermined;
 
-        default:
-            return Acceptance::rejected;
+            default:
+                return Acceptance::rejected;
         }
     }
-    [[nodiscard]] TokenType tokenType() const override
-    {
+
+    [[nodiscard]] TokenType tokenType() const override {
         return TokenType::floatpt;
     }
 };
 
 ///
 /// -?[0-9]+[l]?                    8.(+/-) float or double
-class ScanInt : public ScannerBase
-{
+class ScanInt : public ScannerBase {
 public:
     enum class States {
         start,
@@ -386,76 +382,71 @@ public:
         reject,
     } mState = States::start;
 
-    void matchChar(char c) override
-    {
-        switch (mState)
-        {
-        case States::start:
-            if (c == '-') { mState = States::negative; }
-            else if (isdigit(c) && c != '0') { mState = States::digit; }
-            else if (c == '0') { mState = States::zero; }
-            else { mState = States::reject; }
-            break;
-        case States::negative:
-            if (isdigit(c) && c != '0') { mState = States::digit; }
-            else if (c == '0') { mState = States::zero; }
-            else { mState = States::reject; }
-            break;
-        case States::zero:
-            mState = States::reject;
-            break;
-        case States::digit:
-            if (isdigit(c)) { mState = States::digit; }
-            else { mState = States::reject; }
-            break;
-        default: break;
+    void matchChar(char c) override {
+        switch (mState) {
+            case States::start:
+                if (c == '-') { mState = States::negative; }
+                else if (isdigit(c) && c != '0') { mState = States::digit; }
+                else if (c == '0') { mState = States::zero; }
+                else { mState = States::reject; }
+                break;
+            case States::negative:
+                if (isdigit(c) && c != '0') { mState = States::digit; }
+                else if (c == '0') { mState = States::zero; }
+                else { mState = States::reject; }
+                break;
+            case States::zero:
+                mState = States::reject;
+                break;
+            case States::digit:
+                if (isdigit(c)) { mState = States::digit; }
+                else { mState = States::reject; }
+                break;
+            default:
+                break;
         }
     }
 
-    [[nodiscard]] Acceptance acceptance() const override
-    {
-        switch (mState)
-        {
-        case States::digit:
-        case States::zero:
-            return Acceptance::accepted;
+    [[nodiscard]] Acceptance acceptance() const override {
+        switch (mState) {
+            case States::digit:
+            case States::zero:
+                return Acceptance::accepted;
 
-        case States::start:
-        case States::negative:
-            return Acceptance::undetermined;
+            case States::start:
+            case States::negative:
+                return Acceptance::undetermined;
 
-        default:
-            return Acceptance::rejected;
+            default:
+                return Acceptance::rejected;
         }
     }
-    [[nodiscard]] TokenType tokenType() const override
-    {
+
+    [[nodiscard]] TokenType tokenType() const override {
         return TokenType::integer;
     }
 };
 
 ///
-class ScannerSet
-{
+class ScannerSet {
 private:
     std::vector<std::shared_ptr<ScannerBase>> mScanners;
     std::vector<ScannerBase::Acceptance> mPrevAcceptance;
     bool mAllRejected = false;
 public:
-    ScannerSet()
-    {
+    ScannerSet() {
         mScanners.emplace_back(std::make_shared<ScanParen>());
         mScanners.emplace_back(std::make_shared<ScanInt>());
         mScanners.emplace_back(std::make_shared<ScanFloat>());
         mScanners.emplace_back(std::make_shared<ScanString>());
         mScanners.emplace_back(std::make_shared<ScanWhitespace>());
         // Pre-initialize mPrevAcceptance to same size as mScanners
-        for (auto& scanner : mScanners) {
+        for (auto &scanner: mScanners) {
             mPrevAcceptance.emplace_back(scanner->acceptance());
         }
     }
-    void matchChar(const char c)
-    {
+
+    void matchChar(const char c) {
         bool allRejected = true;
         for (int i = 0; i < mScanners.size(); i++) {
             mPrevAcceptance[i] = mScanners[i]->acceptance();
@@ -466,12 +457,12 @@ public:
         }
         mAllRejected = allRejected;
     }
-    [[nodiscard]] bool allRejected() const
-    {
+
+    [[nodiscard]] bool allRejected() const {
         return mAllRejected;
     }
-    [[nodiscard]] std::shared_ptr<ScannerBase> lastAcceptedScanner() const
-    {
+
+    [[nodiscard]] std::shared_ptr<ScannerBase> lastAcceptedScanner() const {
         for (int i = 0; i < mScanners.size(); i++) {
             if (mPrevAcceptance[i] == ScannerBase::Acceptance::accepted) {
                 return mScanners[i];
@@ -725,8 +716,7 @@ public:
 
 } // anonymous namespace
 
-Token TokenStream::get()
-{
+Token TokenStream::get() {
     using namespace std;
 
     if (mStreamStart) {
@@ -838,9 +828,9 @@ namespace tests { // lexer::tests
 
 namespace {
 
-void testHelper(ScannerBase&& scanner, ScannerBase::Acceptance expectedResult, const std::string& testString)
-{
-    for (const char c : testString) {
+void
+testHelper(ScannerBase &&scanner, ScannerBase::Acceptance expectedResult, const std::string &testString) {
+    for (const char c: testString) {
         scanner.matchChar(c);
     }
     if (scanner.acceptance() == expectedResult) {
@@ -853,21 +843,20 @@ void testHelper(ScannerBase&& scanner, ScannerBase::Acceptance expectedResult, c
 
 } // lexer::tests::anonymous namespace
 
-[[maybe_unused]] void testScanNumber()
-{
+[[maybe_unused]] void testScanNumber() {
     ScanInt i;
     ScanFloat f;
-    std::vector<ScannerBase*> scanners{&i, &f};
+    std::vector<ScannerBase *> scanners{&i, &f};
     std::stringstream out;
 
     std::string testStr = "-239842341.234589283 other";
-    for (const char c : testStr) {
-        for (ScannerBase* scanner : scanners) {
+    for (const char c: testStr) {
+        for (ScannerBase *scanner: scanners) {
             scanner->matchChar(c);
         }
 
         bool allReject = true;
-        for (const ScannerBase* scanner : scanners) {
+        for (const ScannerBase *scanner: scanners) {
             if (scanner->acceptance() != ScannerBase::Acceptance::rejected) {
                 allReject = false;
             }
@@ -882,8 +871,7 @@ void testHelper(ScannerBase&& scanner, ScannerBase::Acceptance expectedResult, c
     std::cout << "Lexed: '" << out.str() << "'" << std::endl;
 }
 
-[[maybe_unused]] void testScanInt()
-{
+[[maybe_unused]] void testScanInt() {
     using acc = ScannerBase::Acceptance;
     testHelper(ScanInt(), acc::accepted, "0");
     testHelper(ScanInt(), acc::accepted, "-0");
@@ -899,8 +887,7 @@ void testHelper(ScannerBase&& scanner, ScannerBase::Acceptance expectedResult, c
     testHelper(ScanInt(), acc::rejected, "num");
 }
 
-[[maybe_unused]] void testScanFloat()
-{
+[[maybe_unused]] void testScanFloat() {
     using acc = ScannerBase::Acceptance;
     testHelper(ScanFloat(), acc::accepted, "0.0");
     testHelper(ScanFloat(), acc::accepted, "-0.0");
