@@ -117,6 +117,71 @@ public:
     [[nodiscard]] virtual TokenType tokenType() const = 0;
 };
 
+/// //                       One Line Comment
+/// /* */                    Multi-line Comment
+class ScanComment : public ScannerBase {
+public:
+    enum class States {
+        start,
+        firstSlash, secondSlash, newline,
+        firstStar, secondStar, endSlash,
+        reject,
+    } mState = States::start;
+
+    void matchChar(char c) override {
+        switch (mState) {
+            case States::start:
+                if (c == '/') { mState = States::firstSlash; }
+                else { mState = States::reject; }
+                break;
+            case States::firstSlash:
+                if (c == '/') { mState = States::secondSlash; }
+                else if (c == '*') { mState = States::firstStar; }
+                else { mState = States::reject; }
+                break;
+            case States::secondSlash:
+                if (c == '\n') { mState = States::newline; }
+                break;
+            case States::newline:
+                mState = States::reject;
+                break;
+            case States::firstStar:
+                if (c == '*') { mState = States::secondStar; }
+                break;
+            case States::secondStar:
+                if (c == '*') { mState = States::secondStar; }
+                if (c == '/') { mState = States::endSlash; }
+                else { mState = States::firstStar; }
+                break;
+            case States::endSlash:
+                mState = States::reject;
+                break;
+            default:
+                break;
+        }
+    }
+
+    [[nodiscard]] Acceptance acceptance() const override {
+        switch (mState) {
+            case States::newline:
+            case States::endSlash:
+            case States::secondSlash:
+            case States::firstStar:
+            case States::secondStar:
+                return Acceptance::accepted;
+            case States::start:
+            case States::firstSlash:
+                return Acceptance::undetermined;
+            default:
+                return Acceptance::rejected;
+        }
+    }
+
+    [[nodiscard]] TokenType tokenType() const override {
+        return TokenType::comment;
+    }
+};
+
 /// ".*"                       String literal
 class ScanString : public ScannerBase {
 public:
@@ -401,6 +466,7 @@ private:
     bool mAllRejected = false;
 public:
     ScannerSet() {
+        mScanners.emplace_back(std::make_shared<ScanComment>());
         mScanners.emplace_back(std::make_shared<ScanParen>());
         mScanners.emplace_back(std::make_shared<ScanInt>());
         mScanners.emplace_back(std::make_shared<ScanFloat>());
@@ -492,7 +558,7 @@ Token TokenStream::get() {
         c = mIn->peek();
 
         scannerSet.matchChar(c);
-        if (scannerSet.allRejected()) {
+        if (scannerSet.allRejected() || mIn->eof()) {
             break;
         }
 
