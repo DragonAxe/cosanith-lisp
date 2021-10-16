@@ -458,7 +458,7 @@ public:
 };
 
 ///
-/// -?[0-9]+[l]?                    8.(+/-) float or double
+/// -?[0-9]+[l]?                    8.(+/-) whole number
 class ScanInt : public ScannerBase {
 public:
     enum class States {
@@ -499,11 +499,61 @@ public:
             case States::digit:
             case States::zero:
                 return Acceptance::accepted;
-
             case States::start:
             case States::negative:
                 return Acceptance::undetermined;
+            default:
+                return Acceptance::rejected;
+        }
+    }
 
+    [[nodiscard]] TokenType tokenType() const override {
+        return TokenType::integer;
+    }
+};
+
+///
+/// 0x[0-9a-fA-F]+        6.hex number
+class ScanHex : public ScannerBase {
+public:
+    enum class States {
+        start,
+        zero,
+        x,
+        hexDigit,
+        reject,
+    } mState = States::start;
+
+    void matchChar(char c) override {
+        switch (mState) {
+            case States::start:
+                if (c == '0') { mState = States::zero; }
+                else { mState = States::reject; }
+                break;
+            case States::zero:
+                if (c == 'x') { mState = States::x; }
+                else { mState = States::reject; }
+                break;
+            case States::x:
+                if (isHexDigit(c)) { mState = States::hexDigit; }
+                else { mState = States::reject; }
+                break;
+            case States::hexDigit:
+                if (!isHexDigit(c)) { mState = States::reject; }
+                break;
+            default:
+                break;
+        }
+    }
+
+    [[nodiscard]] Acceptance acceptance() const override {
+        switch (mState) {
+            case States::hexDigit:
+                return Acceptance::accepted;
+            case States::start:
+            case States::zero:
+            case States::x:
+                return Acceptance::undetermined;
             default:
                 return Acceptance::rejected;
         }
@@ -574,6 +624,7 @@ public:
         mScanners.emplace_back(std::make_shared<ScanComment>());
         mScanners.emplace_back(std::make_shared<ScanParen>());
         mScanners.emplace_back(std::make_shared<ScanInt>());
+        mScanners.emplace_back(std::make_shared<ScanHex>());
         mScanners.emplace_back(std::make_shared<ScanFloat>());
         mScanners.emplace_back(std::make_shared<ScanString>());
         mScanners.emplace_back(std::make_shared<ScanCharLiteral>());
