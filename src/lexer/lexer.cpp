@@ -52,6 +52,22 @@ namespace {
     }
 }
 
+[[maybe_unused]] bool isOctDigit(const char c) {
+    switch (c) {
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+            return true;
+        default:
+            return false;
+    }
+}
+
 } // anonymous namespace
 
 // ----------------------------------------------------------------------------
@@ -565,6 +581,52 @@ public:
 };
 
 ///
+// 0[0-7]+               7. octal number
+class ScanOctal : public ScannerBase {
+public:
+    enum class States {
+        start,
+        zero,
+        octDigit,
+        reject,
+    } mState = States::start;
+
+    void matchChar(char c) override {
+        switch (mState) {
+            case States::start:
+                if (c == '0') { mState = States::zero; }
+                else { mState = States::reject; }
+                break;
+            case States::zero:
+                if (isOctDigit(c)) { mState = States::octDigit; }
+                else { mState = States::reject; }
+                break;
+            case States::octDigit:
+                if (!isOctDigit(c)) { mState = States::reject; }
+                break;
+            default:
+                break;
+        }
+    }
+
+    [[nodiscard]] Acceptance acceptance() const override {
+        switch (mState) {
+            case States::octDigit:
+                return Acceptance::accepted;
+            case States::start:
+            case States::zero:
+                return Acceptance::undetermined;
+            default:
+                return Acceptance::rejected;
+        }
+    }
+
+    [[nodiscard]] TokenType tokenType() const override {
+        return TokenType::integer;
+    }
+};
+
+///
 /// \w+                         Whitespace
 class ScanIdentifier : public ScannerBase {
 public:
@@ -624,6 +686,7 @@ public:
         mScanners.emplace_back(std::make_shared<ScanComment>());
         mScanners.emplace_back(std::make_shared<ScanParen>());
         mScanners.emplace_back(std::make_shared<ScanInt>());
+        mScanners.emplace_back(std::make_shared<ScanOctal>());
         mScanners.emplace_back(std::make_shared<ScanHex>());
         mScanners.emplace_back(std::make_shared<ScanFloat>());
         mScanners.emplace_back(std::make_shared<ScanString>());
