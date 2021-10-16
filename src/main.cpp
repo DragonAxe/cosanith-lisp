@@ -1,6 +1,5 @@
 #include <lexer/lexer.h>
 #include <lexer/token.h>
-#include <regex/regex.h>
 #include <parser/parser.h>
 
 #include <iostream>

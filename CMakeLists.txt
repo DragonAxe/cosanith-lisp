@@ -27,8 +27,7 @@ endif()
 
 add_library(lexer)
 add_library(parser)
-add_library(regex)
-target_link_libraries(parser lexer regex)
+target_link_libraries(parser lexer)
 add_executable(main)
 target_link_libraries(main lexer parser ${CONAN_LIBS})
 
