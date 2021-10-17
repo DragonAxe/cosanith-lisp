@@ -41,6 +41,8 @@ public: // Members:
     const Caret mSrcPos;
 
 public: // Methods:
+    Token() = delete;
+
     Token(TokenType type, std::string chars, Caret pos) : mType(type), mSrcString(std::move(chars)), mSrcPos(pos) {}
 
     Token(TokenType type, char chars, Caret pos) : mType(type), mSrcString(std::string() + chars), mSrcPos(pos) {}

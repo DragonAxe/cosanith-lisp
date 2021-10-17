@@ -8,177 +8,6 @@
 #include <string>
 #include <utility>
 
-// class AstBase
-// {
-// public:
-//     virtual void prettyPrint(int indent)
-//     {
-//         throw std::runtime_error("Attempt to call virtual function AstBase::prettyPrint");
-//     }
-// };
-
-// /// [0-9]+
-// class AstInt : public AstBase
-// {
-//     void prettyPrint(int indent) override
-//     {
-//         // using namespace std;
-
-//         // string dt(indent, ' ');
-//         // cout << dt << "[AstAdd] operands:" << endl;
-//         // for (string& arg : args) {
-//         //     cout << arg << " ";
-//         // }
-//         // cout << ") statements:" << endl;
-//         // statement->prettyPrint(indent + 1);
-//     }
-// };
-
-// /// (+ variable number statements, sums all)
-// class AstAdd : public AstBase
-// {
-// private:
-//     std::vector<AstBase*> operands;
-
-// public:
-//     explicit AstAdd(const Node* parseTree)
-//     {
-//         using namespace std;
-//         for (int i = 1; i < get<vector<Node*>>(parseTree->item).size(); i++) {
-//             Node* param = parseTree->getAt(i);
-//             if (param->type == NodeType::leaf) {
-
-//             } else {
-//                 string first = param->first();
-//                 if (first == "") {
-
-//                 }
-//             }
-//         }
-//     }
-
-//     ~AstAdd()
-//     {
-//         for (auto& op : operands) {
-//             delete op;
-//         }
-//     }
-
-//     void prettyPrint(int indent) override
-//     {
-//         using namespace std;
-
-//         string dt(indent, ' ');
-//         cout << dt << "[AstAdd] operands:" << endl;
-//         for (auto& op : operands) {
-//             op->prettyPrint(indent + 2);
-//         }
-//     }
-// };
-
-// /// (call function_name argument list)
-// class AstFnCall : public AstBase
-// {
-// public:
-//     explicit AstFnCall(const Node* parseTree)
-//     {
-
-//     }
-
-//     void prettyPrint(int indent) override
-//     {
-
-//     }
-// };
-
-// /// (fn fn_name (arg list) (statement list))
-// class AstFnDef : public AstBase
-// {
-// private:
-//     std::string name;
-//     std::vector<std::string> args;
-//     AstBase* statement;
-// public:
-//     explicit AstFnDef(const Node* parseTree)
-//     {
-//         // using namespace std;
-
-//         // name = parseTree->getLiteral(1);
-//         // for (Node* arg : parseTree->getList(2)) {
-//         //     args.emplace_back(get<token::Token*>(arg->item));
-//         // }
-//         // Node* statementList = parseTree->getAt(3);
-
-//         // string keyword = statementList->first();
-//         // if (keyword == "fn") {
-//         //     statement = new AstFnDef(statementList);
-//         // } else if (keyword == "call") {
-//         //     statement = new AstFnCall(statementList);
-//         // } else if (keyword == "+") {
-//         //     statement = new AstAdd(statementList);
-//         // } else {
-//         //     throw runtime_error("Unknown first list element: " + keyword);
-//         // }
-//     }
-
-//     void prettyPrint(int indent) override
-//     {
-//         using namespace std;
-
-//         string dt(indent, ' ');
-//         cout << dt << "[AstFnDef] name=" << name << " args=( ";
-//         for (string& arg : args) {
-//             cout << arg << " ";
-//         }
-//         cout << ") statements:" << endl;
-//         statement->prettyPrint(indent + 2);
-//     }
-// };
-
-// /// Contains a list of functions
-// class AstFile : public AstBase
-// {
-// private:
-//     std::vector<AstFnDef*> definitions;
-
-// public:
-//     explicit AstFile(const Node* parseTree)
-//     {
-//         if (parseTree->type == NodeType::list) {
-//             auto list = std::get<std::vector<Node*>>(parseTree->item);
-//             for (auto& statement : list) {
-
-//                 std::string keyword = statement->first();
-//                 if (keyword == "fn") {
-//                     definitions.emplace_back(new AstFnDef(statement));
-//                 } else {
-//                     throw std::runtime_error("Unrecognised statement: " + statement->toFlatStr());
-//                 }
-//             }
-//         } else {
-//             throw std::runtime_error("Top level Node must be a list.");
-//         }
-//     }
-
-//     ~AstFile()
-//     {
-//         for (auto def : definitions) {
-//             delete def;
-//         }
-//     }
-
-//     void prettyPrint(int indent) override
-//     {
-//         using namespace std;
-
-//         string dt(indent, ' ');
-//         cout << dt << "[AstFile] definitions:" << endl;
-//         for (auto& ast : definitions) {
-//             ast->prettyPrint(indent + 2);
-//         }
-//     }
-// };
-
 template<class CharStreamT>
 bool expectTokens(const std::string& note, CharStreamT &&in, const std::string& expectedSequence, bool debug = false) {
     using namespace std;
@@ -213,7 +42,7 @@ bool expectTokens(const std::string& note, CharStreamT &&in, const std::string& 
     return success;
 }
 
-bool lexTests() {
+[[maybe_unused]] bool lexTests() {
     bool success = true;
     success &= expectTokens("identifier", lexer::StrCharStream("text"), "0n1");
     success &= expectTokens("1L-comment", lexer::StrCharStream("// comment"), "0/1");
@@ -248,31 +77,27 @@ bool lexTests() {
 }
 
 
+bool parseTests()
+{
+    using namespace std;
+
+    lexer::TokenStream tokenStream(make_shared<lexer::StrCharStream>("(fn (a b) (+ a 1 b 2))"));
+    shared_ptr<parser::SExpr> sExpr = parser::parseTokens(tokenStream);
+    cout << sExpr->orderedPairStr() << endl;
+    cout << sExpr->listStr() << endl;
+
+    return true;
+}
+
+
 int main() {
     // using namespace std;
 
-    // lexer::FileCharStream in("/home/dragonaxe/Documents/programming_conan/calculator/lisp.rp");
+    // lexer::FileCharStream in("../../files/lisp.rp");
 
     bool success = true;
-    success &= lexTests();
-
-    // lexer::tests::testScanNumber();
-    // lexer::tests::testScanInt();
-    // lexer::tests::testScanFloat();
-
-    //     Node* root = parseNodes(in);
-    //     // root->prettyPrint();
-    //     AstFile ast(root);
-    //     ast.prettyPrint(0);
-    //     delete root;
-
-    // while (true)
-    // {
-    //     cout << "token: " << getToken(in).description() << endl;
-    //     if (in.eof()) {
-    //         break;
-    //     }
-    // }
+    // success &= lexTests();
+    success &= parseTests();
 
     return success;
 }

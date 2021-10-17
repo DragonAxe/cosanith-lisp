@@ -76,43 +76,6 @@ namespace lexer {
 
 namespace {
 
-//Token lexIdentifier(CharStream& in, std::string partialStr);
-
-//
-// Slurp helpers --------------------------------------------------------------
-//
-
-//void getWhile(const std::function<bool (const char)>& condition, CharStream& in, std::stringstream& out)
-//{
-//    while (true) {
-//        char c = in.peek();
-//        if (condition(c) && !in.eof()) {
-//            out << in.get();
-//        } else {
-//            break;
-//        }
-//    }
-//}
-//
-//void getExpect(const std::function<bool (const char)>& condition, CharStream& in, std::stringstream& out)
-//{
-//    char c = in.peek();
-//    bool matches = condition(c);
-//    if (matches) {
-//        out << in.get();
-//    } else {
-//        std::stringstream err;
-//        err << "Unexpected ";
-//        if (in.eof()) {
-//            err << "EOF";
-//        } else {
-//            err << '\'' << c << '\'';
-//        }
-//        err << " while scanning";
-//        throw std::runtime_error(err.str());
-//    }
-//}
-
 //
 // Scanner state machines -----------------------------------------------------
 //

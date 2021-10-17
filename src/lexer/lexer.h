@@ -1,6 +1,7 @@
 #pragma once
 
 #include <charStream.h>
+#include <token.h>
 
 #include <string>
 #include <utility>
@@ -8,7 +9,6 @@
 #include <memory>
 
 namespace lexer {
-class Token;
 
 class TokenStream
 {
