@@ -14,6 +14,7 @@ class CalculatorConan(ConanFile):
     # default_options = {"shared": False, "fPIC": True}
     generators = "cmake"
     # requires = "ncurses/6.2"
+    requires = "llvm-core/12.0.0"
 
     def config_options(self):
         if self.settings.os == "Windows":

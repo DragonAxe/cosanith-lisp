@@ -2,6 +2,18 @@
 #include <lexer/token.h>
 #include <parser/parser.h>
 
+#include <llvm/ADT/APFloat.h>
+#include <llvm/ADT/STLExtras.h>
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/Type.h>
+#include <llvm/IR/Verifier.h>
+
 #include <iostream>
 #include <istream>
 #include <fstream>
@@ -90,14 +102,36 @@ bool parseTests()
 }
 
 
+static std::unique_ptr<llvm::LLVMContext> TheContext;
+static std::unique_ptr<llvm::Module> TheModule;
+static std::unique_ptr<llvm::IRBuilder<>> Builder;
+static std::map<std::string, llvm::Value *> NamedValues;
+
+
+void llvmTest()
+{
+    TheContext = std::make_unique<llvm::LLVMContext>();
+    TheModule = std::make_unique<llvm::Module>("my cool lisp lang", *TheContext);
+    std::vector<llvm::Type*> ArgTypes;
+    llvm::FunctionType* FT = llvm::FunctionType::get(llvm::Type::getVoidTy(*TheContext), ArgTypes, false);
+    llvm::Function* TheFunction = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "MyFun", TheModule.get());
+
+    // llvm::BasicBlock* bb = llvm::BasicBlock::Create(*TheContext, "entry", TheFunction);
+
+    TheModule->print(llvm::errs(), nullptr);
+}
+
+
 int main() {
     // using namespace std;
 
     // lexer::FileCharStream in("../../files/lisp.rp");
 
+    llvmTest();
+
     bool success = true;
     // success &= lexTests();
-    success &= parseTests();
+    // success &= parseTests();
 
     return success;
 }
