@@ -112,11 +112,20 @@ void llvmTest()
 {
     TheContext = std::make_unique<llvm::LLVMContext>();
     TheModule = std::make_unique<llvm::Module>("my cool lisp lang", *TheContext);
+    Builder = std::make_unique<llvm::IRBuilder<>>(*TheContext);
     std::vector<llvm::Type*> ArgTypes;
     llvm::FunctionType* FT = llvm::FunctionType::get(llvm::Type::getVoidTy(*TheContext), ArgTypes, false);
     llvm::Function* TheFunction = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "MyFun", TheModule.get());
 
-    // llvm::BasicBlock* bb = llvm::BasicBlock::Create(*TheContext, "entry", TheFunction);
+    llvm::BasicBlock* bb = llvm::BasicBlock::Create(*TheContext, "", TheFunction);
+
+    Builder->SetInsertPoint(bb);
+
+    llvm::Constant* retVal = llvm::ConstantInt::get(*TheContext, llvm::APInt(64, 192651));
+    Builder->CreateRet(retVal);
+
+    // Validate the generated code, checking for consistency.
+    verifyFunction(*TheFunction);
 
     TheModule->print(llvm::errs(), nullptr);
 }
