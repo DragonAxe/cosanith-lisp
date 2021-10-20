@@ -8,6 +8,7 @@
 #include <vector>
 #include <memory>
 #include <sstream>
+#include <functional>
 
 namespace lexer {
 class TokenStream;
@@ -31,6 +32,19 @@ class SExpr {
 public:
     std::shared_ptr<Atom> car{nullptr};
     std::shared_ptr<SExpr> cdr{nullptr};
+
+    void forEachInList(const std::function<void (std::shared_ptr<Atom>)>& user_function)
+    {
+        auto* currentExpr = this;
+        while (true) {
+            user_function(currentExpr->car);
+            if (currentExpr->cdr) {
+                currentExpr = currentExpr->cdr.get();
+            } else {
+                break;
+            }
+        }
+    }
 
     std::string orderedPairStr()
     {

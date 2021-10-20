@@ -1,6 +1,7 @@
 #include <lexer/lexer.h>
 #include <lexer/token.h>
 #include <parser/parser.h>
+#include <parser/ast.h>
 
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/STLExtras.h>
@@ -89,7 +90,7 @@ bool expectTokens(const std::string& note, CharStreamT &&in, const std::string& 
 }
 
 
-bool parseTests()
+[[maybe_unused]] bool parseTests()
 {
     using namespace std;
 
