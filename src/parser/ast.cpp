@@ -5,9 +5,4 @@
 
 namespace parser {
 
-Ast parseTreeToAst(SExpr sExpr) {
-
-    return parser::Ast();
-}
-
 }
