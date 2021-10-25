@@ -25,6 +25,7 @@ class Atom;
 class AtomSExpr;
 
 class AstFnDef;
+class AstIdentifier;
 
 class Ast
 {
@@ -37,7 +38,7 @@ public:
   std::string mModuleName;
   std::vector<std::shared_ptr<AstFnDef>> mFunctionDefinitions;
 
-  AstModule(std::shared_ptr<parser::SExpr> sExpr, std::string moduleName);
+  AstModule(const std::shared_ptr<parser::SExpr>& sExpr, std::string moduleName);
 
   [[nodiscard]] std::shared_ptr<llvm::Module> codegen() const;
 };
@@ -46,12 +47,20 @@ class AstFnDef : public Ast
 {
 public:
   std::string mFnName;
-  std::vector<std::string> mParamNames;
-  std::vector<std::string> mParamTypes;
+  std::vector<std::shared_ptr<AstIdentifier>> mParams;
 
-  explicit AstFnDef(std::shared_ptr<parser::SExpr> sExpr);
+  explicit AstFnDef(const std::shared_ptr<parser::SExpr>& sExpr);
 
   llvm::Function *codegen() const;
+};
+
+class AstIdentifier : public Ast
+{
+public:
+  std::string mName;
+  std::string mType;
+
+  explicit AstIdentifier(const std::shared_ptr<lexer::Token>& sExpr);
 };
 
 class AstBinExpr : public Ast

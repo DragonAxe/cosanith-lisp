@@ -17,7 +17,7 @@ static void InitializeModule() {
 }
 
 ast::AstModule::AstModule(
-    std::shared_ptr<parser::SExpr> sExpr,
+    const std::shared_ptr<parser::SExpr>& sExpr,
     std::string moduleName)
     : mModuleName(std::move(moduleName))
 {
@@ -44,7 +44,7 @@ std::shared_ptr<llvm::Module> ast::AstModule::codegen() const
   return TheModule;
 }
 
-ast::AstFnDef::AstFnDef(std::shared_ptr<parser::SExpr> sExpr)
+ast::AstFnDef::AstFnDef(const std::shared_ptr<parser::SExpr>& sExpr)
 {
   using namespace std;
   // keyword 'fn'
@@ -93,9 +93,12 @@ ast::AstFnDef::AstFnDef(std::shared_ptr<parser::SExpr> sExpr)
     auto atom = *optionalParams;
     if (atom->type() == parser::Atom::Type::sExpr) {
       auto sExprAtom = std::static_pointer_cast<parser::AtomSExpr>(atom);
-      auto sExpr = sExprAtom->mExpr;
-      sExpr->forEachInList([this](const shared_ptr<parser::Atom> &param){
-
+      auto paramSExpr = sExprAtom->mExpr;
+      paramSExpr->forEachInList([this](const shared_ptr<parser::Atom> &param){
+        if (param->type() == parser::Atom::Type::token) {
+          auto paramAtomToken = static_pointer_cast<parser::AtomToken>(param);
+          mParams.emplace_back(make_shared<AstIdentifier>(paramAtomToken->mToken));
+        }
       });
     } else {
       throw runtime_error("Expected parameter list, got atom for third element of function.");
@@ -128,4 +131,9 @@ llvm::Function *ast::AstFnDef::codegen() const
   llvm::verifyFunction(*TheFunction);
 
   return TheFunction;
+}
+
+ast::AstIdentifier::AstIdentifier(const std::shared_ptr<lexer::Token>& sExpr)
+{
+
 }
