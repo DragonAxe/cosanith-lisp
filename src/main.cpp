@@ -113,38 +113,52 @@ bool expectTokens(
 }
 
 
-static std::unique_ptr<llvm::LLVMContext> TheContext;
-static std::unique_ptr<llvm::Module> TheModule;
-static std::unique_ptr<llvm::IRBuilder<>> Builder;
-static std::map<std::string, llvm::Value *> NamedValues;
+// static std::unique_ptr<llvm::LLVMContext> TheContext;
+// static std::unique_ptr<llvm::Module> TheModule;
+// static std::unique_ptr<llvm::IRBuilder<>> Builder;
+// static std::map<std::string, llvm::Value *> NamedValues;
+//
+//
+// void llvmTest()
+// {
+//   TheContext = std::make_unique<llvm::LLVMContext>();
+//   TheModule = std::make_unique<llvm::Module>("my cool lisp lang", *TheContext);
+//   Builder = std::make_unique<llvm::IRBuilder<>>(*TheContext);
+//   std::vector<llvm::Type *> ArgTypes;
+//   llvm::FunctionType *FT = llvm::FunctionType::get(llvm::Type::getVoidTy(*TheContext),
+//       ArgTypes,
+//       false);
+//   llvm::Function *TheFunction = llvm::Function::Create(FT,
+//       llvm::Function::ExternalLinkage,
+//       "MyFun",
+//       TheModule.get());
+//
+//   llvm::BasicBlock *bb = llvm::BasicBlock::Create(*TheContext, "", TheFunction);
+//
+//   Builder->SetInsertPoint(bb);
+//
+//   llvm::Constant *retVal = llvm::ConstantInt::get(*TheContext,
+//       llvm::APInt(64, 192651));
+//   Builder->CreateRet(retVal);
+//
+//   // Validate the generated code, checking for consistency.
+//   verifyFunction(*TheFunction);
+//
+//   TheModule->print(llvm::errs(), nullptr);
+// }
 
 
-void llvmTest()
+void astTest()
 {
-  TheContext = std::make_unique<llvm::LLVMContext>();
-  TheModule = std::make_unique<llvm::Module>("my cool lisp lang", *TheContext);
-  Builder = std::make_unique<llvm::IRBuilder<>>(*TheContext);
-  std::vector<llvm::Type *> ArgTypes;
-  llvm::FunctionType *FT = llvm::FunctionType::get(llvm::Type::getVoidTy(*TheContext),
-      ArgTypes,
-      false);
-  llvm::Function *TheFunction = llvm::Function::Create(FT,
-      llvm::Function::ExternalLinkage,
-      "MyFun",
-      TheModule.get());
+  using namespace std;
+  // map<std::string, llvm::Value *> llvmNamedValues;
 
-  llvm::BasicBlock *bb = llvm::BasicBlock::Create(*TheContext, "", TheFunction);
+  lexer::TokenStream tokenStream(make_shared<lexer::StrCharStream>("(fn double (a) (* 2 a))\n(fn main () (let (x 5) (double x))"));
+  shared_ptr<parser::SExpr> sExpr = parser::parseTokens(tokenStream);
+  ast::AstModule astModule(sExpr, "testModule");
+  shared_ptr<llvm::Module> llvmModule = astModule.codegen();
 
-  Builder->SetInsertPoint(bb);
-
-  llvm::Constant *retVal = llvm::ConstantInt::get(*TheContext,
-      llvm::APInt(64, 192651));
-  Builder->CreateRet(retVal);
-
-  // Validate the generated code, checking for consistency.
-  verifyFunction(*TheFunction);
-
-  TheModule->print(llvm::errs(), nullptr);
+  llvmModule->print(llvm::errs(), nullptr);
 }
 
 
@@ -154,7 +168,8 @@ int main()
 
   // lexer::FileCharStream in("../../files/lisp.rp");
 
-  llvmTest();
+  // llvmTest();
+  astTest();
 
   bool success = true;
   // success &= lexTests();

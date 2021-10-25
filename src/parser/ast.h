@@ -2,15 +2,22 @@
 
 #include <parser.h>
 
-#include <llvm/IR/Value.h>
+#include <llvm/ADT/APFloat.h>
+#include <llvm/ADT/STLExtras.h>
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/Constants.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
+#include <llvm/IR/Type.h>
+#include <llvm/IR/Verifier.h>
 
 #include <memory>
 #include <utility>
 
-namespace parser {
+namespace ast {
 class SExpr;
 
 class Atom;
@@ -22,10 +29,6 @@ class AstFnDef;
 class Ast
 {
 public:
-  virtual llvm::Value *codegen(
-      std::unique_ptr<llvm::LLVMContext> context,
-      std::shared_ptr<llvm::Module> module,
-      std::unique_ptr<llvm::IRBuilder<>> builder) = 0;
 };
 
 class AstModule : public Ast
@@ -34,59 +37,21 @@ public:
   std::string mModuleName;
   std::vector<std::shared_ptr<AstFnDef>> mFunctionDefinitions;
 
-  AstModule(std::shared_ptr<parser::SExpr> sExpr, std::string moduleName)
-      : mModuleName(std::move(moduleName))
-  {
-    using namespace std;
-    sExpr->forEachInList([this](const shared_ptr<Atom> &atom) {
-      if (atom->type() == Atom::Type::sExpr) {
-        shared_ptr<SExpr> expr = static_pointer_cast<AtomSExpr>(atom)->mExpr;
-        mFunctionDefinitions.emplace_back(make_shared<AstFnDef>(expr));
-      }
-    });
-  }
+  AstModule(std::shared_ptr<parser::SExpr> sExpr, std::string moduleName);
 
-  llvm::Value *codegen(
-      std::unique_ptr<llvm::LLVMContext> context,
-      std::shared_ptr<llvm::Module> module,
-      std::unique_ptr<llvm::IRBuilder<>> builder) override
-  {
-    return nullptr;
-  }
+  [[nodiscard]] std::shared_ptr<llvm::Module> codegen() const;
 };
 
 class AstFnDef : public Ast
 {
 public:
-  explicit AstFnDef(std::shared_ptr<parser::SExpr> sExpr)
-  {
+  std::string mFnName;
+  std::vector<std::string> mParamNames;
+  std::vector<std::string> mParamTypes;
 
-  }
+  explicit AstFnDef(std::shared_ptr<parser::SExpr> sExpr);
 
-  llvm::Value *codegen(
-      std::unique_ptr<llvm::LLVMContext> context,
-      std::shared_ptr<llvm::Module> module,
-      std::unique_ptr<llvm::IRBuilder<>> builder) override
-  {
-    std::vector<llvm::Type *> ArgTypes;
-    llvm::FunctionType *FT = llvm::FunctionType::get(llvm::Type::getVoidTy(*context),
-        ArgTypes,
-        false);
-    llvm::Function *TheFunction = llvm::Function::Create(FT,
-        llvm::Function::ExternalLinkage,
-        "MyFun",
-        module.get());
-
-    llvm::BasicBlock *bb = llvm::BasicBlock::Create(*context, "", TheFunction);
-
-    builder->SetInsertPoint(bb);
-
-    llvm::Constant *retVal = llvm::ConstantInt::get(*context,
-        llvm::APInt(64, 192651));
-    builder->CreateRet(retVal);
-
-    return TheFunction;
-  }
+  llvm::Function *codegen() const;
 };
 
 class AstBinExpr : public Ast

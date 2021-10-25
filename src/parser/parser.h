@@ -9,6 +9,7 @@
 #include <memory>
 #include <sstream>
 #include <functional>
+#include <optional>
 
 namespace lexer {
 class TokenStream;
@@ -32,6 +33,8 @@ class SExpr {
 public:
     std::shared_ptr<Atom> car{nullptr};
     std::shared_ptr<SExpr> cdr{nullptr};
+
+    std::optional<std::shared_ptr<Atom>> operator[](std::size_t index) const;
 
     void forEachInList(const std::function<void (std::shared_ptr<Atom>)>& user_function)
     {
