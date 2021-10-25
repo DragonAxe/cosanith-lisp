@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.13)
+cmake_minimum_required(VERSION 3.1)
 project(calculator)
 
 set(PROPERTY CXX_STANDARD 20)
@@ -32,5 +32,3 @@ add_executable(main)
 target_link_libraries(main lexer parser ${CONAN_LIBS})
 
 add_subdirectory(src)
-
-

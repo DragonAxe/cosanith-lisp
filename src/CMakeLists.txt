@@ -1,9 +1,6 @@
-target_sources(main
-    PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
-#
+include("${PROJECT_SOURCE_DIR}/dynamicCMake/CMakeLists.txt")
 
-target_include_directories(main PUBLIC ${CMAKE_CURRENT_LIST_DIR})
+dynamicCMake("main")
 
 add_subdirectory(lexer)
 add_subdirectory(parser)
