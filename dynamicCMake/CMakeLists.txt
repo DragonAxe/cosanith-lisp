@@ -19,7 +19,7 @@ function(dynamicCMake MyModuleName)
     target_include_directories("${MyModuleName}" PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
     #
-    #
+    # Construct namespace names based on source path
     #
 
     string(REPLACE "${PROJECT_SOURCE_DIR}" "" MyPath "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -29,11 +29,14 @@ function(dynamicCMake MyModuleName)
     while(NOT MyPath STREQUAL "/")
         get_filename_component(FolderName "${MyPath}" NAME)
         get_filename_component(MyPath "${MyPath}" DIRECTORY)
+        if (FolderName MATCHES "src")
+            set(FolderName "cosanith")
+        endif ()
         string(PREPEND FolderNamespace "${FolderName}${NamespaceGlue}")
         set(NamespaceGlue "::")
     endwhile()
 
-    # target_compile_options("${MyModuleName}" PRIVATE "-DFOLDER_NAMESPACE=${FolderNamespace}")
+    target_compile_options("${MyModuleName}" PRIVATE "-DFOLDER_NAMESPACE=${FolderNamespace}")
 
     list(LENGTH MySources MySrcSize)
     list(LENGTH MyHeaders MyHeaderSize)

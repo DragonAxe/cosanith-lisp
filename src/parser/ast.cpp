@@ -2,12 +2,15 @@
 
 #include <parser.h>
 
+namespace ast {
+
 static std::shared_ptr<llvm::LLVMContext> TheContext;
 static std::shared_ptr<llvm::Module> TheModule;
 static std::shared_ptr<llvm::IRBuilder<>> Builder;
 static std::map<std::string, llvm::Value *> NamedValues;
 
-static void InitializeModule() {
+static void InitializeModule()
+{
   // Open a new context and module.
   TheContext = std::make_shared<llvm::LLVMContext>();
   TheModule = std::make_shared<llvm::Module>("my cool jit", *TheContext);
@@ -16,8 +19,8 @@ static void InitializeModule() {
   Builder = std::make_shared<llvm::IRBuilder<>>(*TheContext);
 }
 
-ast::AstModule::AstModule(
-    const std::shared_ptr<parser::SExpr>& sExpr,
+AstModule::AstModule(
+    const std::shared_ptr<parser::SExpr> &sExpr,
     std::string moduleName)
     : mModuleName(std::move(moduleName))
 {
@@ -31,7 +34,7 @@ ast::AstModule::AstModule(
   });
 }
 
-std::shared_ptr<llvm::Module> ast::AstModule::codegen() const
+std::shared_ptr<llvm::Module> AstModule::codegen() const
 {
   using namespace std;
 
@@ -44,7 +47,7 @@ std::shared_ptr<llvm::Module> ast::AstModule::codegen() const
   return TheModule;
 }
 
-ast::AstFnDef::AstFnDef(const std::shared_ptr<parser::SExpr>& sExpr)
+AstFnDef::AstFnDef(const std::shared_ptr<parser::SExpr> &sExpr)
 {
   using namespace std;
   // keyword 'fn'
@@ -58,13 +61,15 @@ ast::AstFnDef::AstFnDef(const std::shared_ptr<parser::SExpr>& sExpr)
         if (token->mSrcString == "fn") {
           // All good
         } else {
-          throw runtime_error("Expected keyword fn, got another keyword: " + token->mSrcString);
+          throw runtime_error(
+              "Expected keyword fn, got another keyword: " + token->mSrcString);
         }
       } else {
         throw runtime_error("Expected keyword, got " + token->description());
       }
     } else {
-      throw runtime_error("Expected atom, got list for first element of function.");
+      throw runtime_error(
+          "Expected atom, got list for first element of function.");
     }
   } else {
     throw runtime_error("Expected function definition, got empty list.");
@@ -79,10 +84,12 @@ ast::AstFnDef::AstFnDef(const std::shared_ptr<parser::SExpr>& sExpr)
       if (token->mType == lexer::TokenType::identifier) {
         mFnName = token->mSrcString;
       } else {
-        throw runtime_error("Expected identifier for function name, got " + token->description());
+        throw runtime_error("Expected identifier for function name, got " +
+                            token->description());
       }
     } else {
-      throw runtime_error("Expected atom, got list for second element of function.");
+      throw runtime_error(
+          "Expected atom, got list for second element of function.");
     }
   } else {
     throw runtime_error("??Expected function definition, got empty list.");
@@ -94,21 +101,22 @@ ast::AstFnDef::AstFnDef(const std::shared_ptr<parser::SExpr>& sExpr)
     if (atom->type() == parser::Atom::Type::sExpr) {
       auto sExprAtom = std::static_pointer_cast<parser::AtomSExpr>(atom);
       auto paramSExpr = sExprAtom->mExpr;
-      paramSExpr->forEachInList([this](const shared_ptr<parser::Atom> &param){
+      paramSExpr->forEachInList([this](const shared_ptr<parser::Atom> &param) {
         if (param->type() == parser::Atom::Type::token) {
           auto paramAtomToken = static_pointer_cast<parser::AtomToken>(param);
           mParams.emplace_back(make_shared<AstIdentifier>(paramAtomToken->mToken));
         }
       });
     } else {
-      throw runtime_error("Expected parameter list, got atom for third element of function.");
+      throw runtime_error(
+          "Expected parameter list, got atom for third element of function.");
     }
   } else {
     throw runtime_error("??Expected function definition, got empty list.");
   }
 }
 
-llvm::Function *ast::AstFnDef::codegen() const
+llvm::Function *AstFnDef::codegen() const
 {
   std::vector<llvm::Type *> ArgTypes;
 
@@ -133,7 +141,9 @@ llvm::Function *ast::AstFnDef::codegen() const
   return TheFunction;
 }
 
-ast::AstIdentifier::AstIdentifier(const std::shared_ptr<lexer::Token>& sExpr)
+AstIdentifier::AstIdentifier(const std::shared_ptr<lexer::Token> &sExpr)
 {
+
+}
 
 }
