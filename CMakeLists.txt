@@ -23,7 +23,6 @@ if( NOT ${WIN32} )
         ALL
         DEPENDS ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/a.out)
 endif()
-#
 
 add_library(lexer)
 add_library(parser)

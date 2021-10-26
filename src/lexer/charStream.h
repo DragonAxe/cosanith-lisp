@@ -3,7 +3,7 @@
 #include <string>
 #include <fstream>
 
-namespace lexer {
+namespace FOLDER_NAMESPACE {
 
 /// Represents a column and line position within a character stream.
 class Caret
