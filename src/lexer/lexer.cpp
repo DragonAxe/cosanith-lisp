@@ -1,4 +1,4 @@
-#include <charStream.h>
+#include <../charStream/CharStream.h>
 #include <lexer.h>
 #include <token.h>
 

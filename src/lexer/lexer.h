@@ -1,6 +1,6 @@
 #pragma once
 
-#include <charStream.h>
+#include <../charStream/CharStream.h>
 #include <token.h>
 
 #include <string>
