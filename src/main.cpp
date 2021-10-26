@@ -1,3 +1,4 @@
+#include <charStream/CharStream.h>
 #include <lexer/lexer.h>
 #include <lexer/token.h>
 #include <parser/parser.h>
@@ -30,8 +31,8 @@ bool expectTokens(
 {
   using namespace std;
 
-  static_assert(std::is_base_of<lexer::CharStream, CharStreamT>::value,
-      "Input stream parameter must inherit from lexer::CharStream.");
+  static_assert(std::is_base_of<CharStream, CharStreamT>::value,
+      "Input stream parameter must inherit from CharStream.");
 
   bool success = true;
   lexer::TokenStream ts(make_shared<CharStreamT>(in));
