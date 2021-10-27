@@ -101,12 +101,16 @@ AstFnDef::AstFnDef(const std::shared_ptr<parser::SExpr> &sExpr)
     if (atom->type() == parser::Atom::Type::sExpr) {
       auto sExprAtom = std::static_pointer_cast<parser::AtomSExpr>(atom);
       auto paramSExpr = sExprAtom->mExpr;
-      paramSExpr->forEachInList([this](const shared_ptr<parser::Atom> &param) {
-        if (param->type() == parser::Atom::Type::token) {
-          auto paramAtomToken = static_pointer_cast<parser::AtomToken>(param);
-          mParams.emplace_back(make_shared<AstIdentifier>(paramAtomToken->mToken));
-        }
-      });
+      if (sExprAtom->mExpr) {
+        paramSExpr->forEachInList([this](const shared_ptr<parser::Atom> &param) {
+          if (param->type() == parser::Atom::Type::token) {
+            auto paramAtomToken = static_pointer_cast<parser::AtomToken>(param);
+            mParams.emplace_back(make_shared<AstIdentifier>(paramAtomToken->mToken));
+          }
+        });
+      } else {
+        // No parameters
+      }
     } else {
       throw runtime_error(
           "Expected parameter list, got atom for third element of function.");
